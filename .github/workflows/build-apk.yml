@@ -40,6 +40,9 @@ jobs:
       - name: Tests
         run: flutter test
 
+      - name: Licences Android SDK
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
       - name: Clé de signature (toujours la même, pour pouvoir mettre à jour l'app)
         env:
           KEY_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
@@ -61,7 +64,7 @@ jobs:
             --dart-define=APP_BUILD=${{ github.run_number }} 2>&1 | tee apk_build.log
           status=${PIPESTATUS[0]}
           if [ "$status" -ne 0 ]; then
-            msg=$(grep -E -A6 "What went wrong|Error:|error:|FAILURE" apk_build.log | head -60 | sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g')
+            msg=$(grep -E -B2 -A8 "What went wrong|Error:|error:|FAILURE|sdkmanager|Failed to install|licen|Warning:" apk_build.log | head -120 | sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g')
             echo "::error title=APK::${msg}"
           fi
           exit $status
