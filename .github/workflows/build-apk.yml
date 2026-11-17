@@ -1,0 +1,100 @@
+name: Construire l'APK
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          cache: true
+
+      - name: Préparer android/
+        run: bash tool/prepare_android.sh
+
+      - name: Dépendances
+        run: flutter pub get
+
+      - name: Icône de l'app
+        run: dart run flutter_launcher_icons
+
+      - name: Analyse du code
+        run: flutter analyze --no-fatal-infos --no-fatal-warnings
+
+      - name: Tests
+        run: flutter test
+
+      - name: Clé de signature (toujours la même, pour pouvoir mettre à jour l'app)
+        env:
+          KEY_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
+        run: |
+          mkdir -p ~/.android
+          if [ -n "$KEY_B64" ]; then
+            printf '%s' "$KEY_B64" | tr -d ' \r\n' | base64 -d > ~/.android/debug.keystore
+          else
+            base64 -d .ci/signing-key.b64 > ~/.android/debug.keystore
+          fi
+
+      - name: Construire l'APK
+        shell: bash
+        run: |
+          set +e
+          flutter build apk --release \
+            --build-name=1.0.${{ github.run_number }} \
+            --build-number=${{ github.run_number }} \
+            --dart-define=APP_BUILD=${{ github.run_number }} 2>&1 | tee apk_build.log
+          status=${PIPESTATUS[0]}
+          if [ "$status" -ne 0 ]; then
+            msg=$(grep -E -A6 "What went wrong|Error:|error:|FAILURE" apk_build.log | head -60 | sed ':a;N;$!ba;s/%/%25/g;s/\r//g;s/\n/%0A/g')
+            echo "::error title=APK::${msg}"
+          fi
+          exit $status
+
+      # Sécurité : si l'APK n'est pas signé avec la même clé, le téléphone
+      # demanderait de désinstaller l'ancienne version. On bloque la publication.
+      - name: Vérifier la clé de signature (mise à jour sans désinstaller)
+        run: |
+          EXPECTED=3a9c9a531685a90fc71d49e0ee6f181d769a71ca9a12d40f0a138c35e20647bd
+          APKSIGNER=$(ls -d "$ANDROID_HOME"/build-tools/* | sort -V | tail -1)/apksigner
+          "$APKSIGNER" verify --print-certs build/app/outputs/flutter-apk/app-release.apk | tee sig.txt
+          GOT=$(grep -m1 "certificate SHA-256 digest" sig.txt | awk '{print $NF}')
+          if [ "$GOT" != "$EXPECTED" ]; then
+            echo "::error title=Signature::APK signé avec une AUTRE clé ($GOT)."
+            exit 1
+          fi
+          echo "Signature OK : la mise à jour s'installera par-dessus."
+
+      - name: Renommer
+        run: cp build/app/outputs/flutter-apk/app-release.apk Fixation-Solaire-v1.0.${{ github.run_number }}.apk
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: Fixation-Solaire-apk
+          path: Fixation-Solaire-v1.0.${{ github.run_number }}.apk
+
+      # À chaque envoi sur main : nouvelle Release avec l'APK.
+      # L'application installée la détecte et propose la mise à jour.
+      - name: Publier dans "Releases"
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Fixation Solaire v1.0.${{ github.run_number }}
+          make_latest: true
+          body: "📱 Téléchargez le fichier .apk ci-dessous depuis votre téléphone Android et installez-le. Les nouvelles versions s'installent par-dessus (même clé de signature)."
+          files: Fixation-Solaire-v1.0.${{ github.run_number }}.apk

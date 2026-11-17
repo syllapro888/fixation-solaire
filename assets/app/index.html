@@ -1,0 +1,699 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Calcul fixation panneaux solaires</title>
+<style>
+  :root{
+    --bg:#f2f4f1; --card:#ffffff; --ink:#1d2a22; --muted:#5f6e64; --line:#dfe5df;
+    --acc:#e8a317; --acc-d:#a86f00; --green:#2f6b45; --green-l:#e3efe6;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{ --bg:#121815; --card:#1b231e; --ink:#e8eee9; --muted:#9aa89f; --line:#2c3830; --green-l:#203a2a; --acc-d:#f0b53a; }
+  }
+  *{box-sizing:border-box}
+  body{margin:0;font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;background:var(--bg);color:var(--ink);font-size:16px;-webkit-tap-highlight-color:transparent}
+  header{background:var(--green);color:#fff;padding:16px 16px 14px}
+  header h1{margin:0;font-size:20px}
+  header p{margin:3px 0 0;font-size:13px;opacity:.85}
+  main{max-width:720px;margin:0 auto;padding:12px 10px 50px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px;margin-bottom:12px}
+  .card h2{margin:0 0 10px;font-size:14px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted)}
+  .q{font-size:17px;font-weight:700;margin:0 0 10px}
+  .big{display:flex;align-items:center;gap:10px}
+  .big .q{flex:1;margin:0}
+  .stepper{display:inline-flex;align-items:center;border:2px solid var(--green);border-radius:12px;overflow:hidden;flex:none}
+  .stepper button{width:46px;height:46px;border:0;background:var(--green);color:#fff;font-size:24px;font-weight:700;touch-action:manipulation}
+  .stepper input{width:62px;height:46px;border:0;text-align:center;font-size:20px;font-weight:700;background:var(--card);color:var(--ink);-moz-appearance:textfield}
+  .stepper.lg button{width:54px;height:54px;font-size:28px}
+  .stepper.lg input{width:76px;height:54px;font-size:26px}
+  .stepper.sm button{width:38px;height:40px;font-size:20px}
+  .stepper.sm input{width:54px;height:40px;font-size:17px}
+  input::-webkit-outer-spin-button,input::-webkit-inner-spin-button{-webkit-appearance:none;margin:0}
+  .chips{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px}
+  .chip{border:2px solid var(--line);border-radius:12px;padding:10px;background:var(--bg);text-align:left;color:var(--ink);font:inherit;cursor:pointer}
+  .chip b{display:block;font-size:16px}
+  .chip span{font-size:13px;color:var(--muted)}
+  .chip.on{border-color:var(--green);background:var(--green-l)}
+  .chip .best{color:var(--green);font-weight:700}
+  @media (prefers-color-scheme: dark){ .chip .best{color:#7cc497} }
+  .custom{display:flex;gap:8px;margin-top:10px;align-items:center}
+  .custom input{flex:1;padding:12px;font-size:18px;border:1px solid var(--line);border-radius:10px;background:var(--bg);color:var(--ink)}
+  .result{border:2px solid var(--acc)}
+  .kpi{display:flex;gap:8px;flex-wrap:wrap}
+  .kpi div{flex:1;min-width:90px;background:var(--bg);border-radius:12px;padding:10px}
+  .kpi b{display:block;font-size:26px;line-height:1.1}
+  .kpi span{font-size:12px;color:var(--muted)}
+  .kpi .main{min-width:150px}
+  .kpi .main b{color:var(--acc-d);font-size:46px}
+  table{width:100%;border-collapse:collapse;font-size:14px}
+  th,td{text-align:left;padding:7px 4px;border-bottom:1px solid var(--line)}
+  th{font-size:12px;color:var(--muted);font-weight:600}
+  td.n,th.n{text-align:right;font-variant-numeric:tabular-nums}
+  .dot{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+  .frame-h{display:flex;justify-content:space-between;align-items:baseline;gap:8px;flex-wrap:wrap}
+  .frame-h h3{margin:0;font-size:18px}
+  .frame-h .dim{font-size:13px;color:var(--muted)}
+  .view{position:relative;background:linear-gradient(#cfe3f3,#eef5fa 60%,#e7e2d6 60%,#ddd6c6);border-radius:12px;overflow:hidden;margin:10px 0 6px;touch-action:pan-y;cursor:grab}
+  @media (prefers-color-scheme: dark){ .view{background:linear-gradient(#1d3346,#27404f 60%,#3a372f 60%,#2f2c25)} }
+  .view svg{display:block;width:100%;height:auto}
+  .hint{position:absolute;right:8px;bottom:6px;font-size:11px;color:#333;background:#ffffffaa;padding:2px 6px;border-radius:6px;pointer-events:none}
+  .side{background:var(--bg);border-radius:12px;margin:6px 0}
+  .side svg{display:block;width:100%;height:auto}
+  .tabs{display:flex;gap:6px;margin-top:8px}
+  .tabs button{flex:1;padding:9px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:14px;font-weight:600}
+  .tabs button.on{background:var(--green);color:#fff;border-color:var(--green)}
+  .params{display:grid;grid-template-columns:1fr auto;gap:8px 10px;align-items:center;margin-top:10px}
+  .params label{font-size:15px}
+  .params label small{display:block;font-size:11px;color:var(--muted)}
+  .params .auto{font-size:10px;background:var(--green-l);color:var(--green);border-radius:6px;padding:1px 5px;margin-left:4px;font-weight:700;vertical-align:1px}
+  @media (prefers-color-scheme: dark){ .params .auto{color:#7cc497} }
+  .sep{grid-column:1/-1;border-top:1px dashed var(--line);margin:2px 0}
+  .row-btns{display:flex;gap:8px;margin-top:12px}
+  .row-btns button,.btn{flex:1;padding:11px;border-radius:10px;border:1px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:14px;font-weight:600}
+  .btn.primary{background:var(--green);color:#fff;border:0;font-size:16px;padding:14px;width:100%}
+  .bar{margin:10px 0 4px}
+  .bar .t{font-size:13px;font-weight:600;margin-bottom:4px;display:flex;justify-content:space-between}
+  .bar .t span{color:var(--muted);font-weight:400}
+  .track{display:flex;height:40px;border-radius:6px;overflow:hidden;background:repeating-linear-gradient(45deg,var(--line),var(--line) 5px,transparent 5px,transparent 10px);border:1px solid var(--line)}
+  .seg{display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:700;border-right:2px solid var(--card);overflow:hidden;white-space:nowrap;line-height:1.05;text-align:center}
+  .seg small{display:block;font-size:9px;font-weight:600;opacity:.85}
+  .warn{background:#fff3d6;color:#6d4900;border-radius:10px;padding:10px;font-size:14px;margin-top:10px}
+  @media (prefers-color-scheme: dark){ .warn{background:#3b2f12;color:#f3d38a} }
+  .note{font-size:12px;color:var(--muted);margin-top:8px}
+  .grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:12px}
+  .f label{display:block;font-size:13px;color:var(--muted);margin-bottom:3px}
+  .f input,.f select{width:100%;padding:10px;border:1px solid var(--line);border-radius:10px;font-size:16px;background:var(--bg);color:var(--ink)}
+  details summary{cursor:pointer;font-weight:700;color:var(--green);padding:2px 0}
+  @media (prefers-color-scheme: dark){ details summary{color:#7cc497} }
+  .native-only{display:none!important}
+  body.native .native-only{display:block!important}
+  header{position:relative}
+  .upd{position:absolute;right:12px;top:14px;background:rgba(255,255,255,.18);color:#fff;border:0;border-radius:10px;padding:8px 10px;font:inherit;font-size:13px;font-weight:700}
+  .ver{font-size:11px;opacity:.75}
+  .legend{display:flex;flex-wrap:wrap;gap:6px 12px;font-size:12px;color:var(--muted);margin-top:6px}
+</style>
+<style>
+  .seg3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px}
+  .seg3 button{padding:10px 6px;border-radius:10px;border:2px solid var(--line);background:var(--bg);color:var(--ink);font:inherit;font-size:13px;font-weight:700;line-height:1.2}
+  .seg3 button small{display:block;font-weight:400;font-size:11px;color:var(--muted);margin-top:2px}
+  .seg3 button.on{border-color:var(--green);background:var(--green-l)}
+  .seg2{display:inline-grid;grid-template-columns:1fr 1fr;border:2px solid var(--green);border-radius:10px;overflow:hidden}
+  .seg2 button{padding:9px 12px;border:0;background:var(--card);color:var(--ink);font:inherit;font-size:14px;font-weight:700}
+  .seg2 button.on{background:var(--green);color:#fff}
+  .subh{font-size:13px;color:var(--muted);font-weight:700;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.5px}
+  h4.cut{margin:14px 0 2px;font-size:15px}
+</style>
+</head>
+<body>
+<header>
+  <h1>☀️ Fixation panneaux solaires</h1>
+  <p>Corners, rails et clamps · simulation 3D · plan de coupe</p>
+  <p class="ver native-only" id="ver"></p>
+  <button type="button" class="upd native-only" id="updBtn">⟳ Mise à jour</button>
+</header>
+<main>
+
+  <section class="card">
+    <div class="big">
+      <p class="q">1. Combien de panneaux ?</p>
+      <div class="stepper lg">
+        <button type="button" id="totMinus">−</button>
+        <input id="total" type="number" inputmode="numeric" min="1">
+        <button type="button" id="totPlus">+</button>
+      </div>
+    </div>
+  </section>
+
+  <section class="card">
+    <p class="q">2. Avec quoi tu fixes ?</p>
+    <div class="seg3" id="sysChoice"></div>
+    <p class="note" id="sysNote"></p>
+  </section>
+
+  <section class="card">
+    <p class="q">3. Tu veux le faire en combien de rangées ?</p>
+    <div class="chips" id="chips"></div>
+    <div class="custom">
+      <input id="customIn" type="text" inputmode="text" placeholder="Autre : ex. 4+4 ou 3+3+2">
+      <button type="button" class="btn" id="customGo" style="flex:none;width:auto;padding:12px 16px">OK</button>
+    </div>
+    <p class="note">Chaque rangée = un cadre. Le matériel est calculé pour chaque choix : comparez avant de décider.</p>
+  </section>
+
+  <section class="card result" id="result"></section>
+
+  <div id="frames"></div>
+
+  <section class="card">
+    <h2>Plan de coupe</h2>
+    <div id="plan"></div>
+    <div class="legend" id="legend"></div>
+    <p class="note">Les zones hachurées sont les chutes (restes). Les pièces de plusieurs cadres sont mélangées pour gaspiller le moins possible.</p>
+  </section>
+
+  <section class="card">
+    <details>
+      <summary>⚙️ Réglages généraux (mesures en cm)</summary>
+      <p class="subh">Panneaux</p>
+      <div class="grid">
+        <div class="f"><label>Largeur panneau</label><input data-g="pW" type="number" inputmode="decimal"></div>
+        <div class="f"><label>Longueur panneau</label><input data-g="pL" type="number" inputmode="decimal"></div>
+        <div class="f" style="grid-column:1/-1"><label>Sens des panneaux</label>
+          <select data-g="orient"><option value="portrait">Debout (côte à côte par la largeur)</option><option value="paysage">Couché (côte à côte par la longueur)</option></select></div>
+      </div>
+      <p class="subh">Corner</p>
+      <div class="grid">
+        <div class="f"><label>Longueur d'un corner</label><input data-g="barL" type="number" inputmode="decimal"></div>
+        <div class="f"><label>Trait de scie (mm)</label><input data-g="kerf" type="number" inputmode="decimal"></div>
+        <div class="f"><label>Pied devant (hauteur)</label><input data-g="legFh" type="number" inputmode="decimal"></div>
+        <div class="f"><label>Pied derrière (hauteur)</label><input data-g="legBh" type="number" inputmode="decimal"></div>
+        <div class="f"><label>Semelle du pied (T)</label><input data-g="footL" type="number" inputmode="decimal"></div>
+        <div class="f"><label>Panneaux par paire de pieds</label><input data-g="panelsPerLeg" type="number" inputmode="numeric"><small class="note">2 → 8 panneaux = 4 pieds devant + 4 derrière</small></div>
+        <div class="f"><label>Crochet</label><input data-g="hookL" type="number" inputmode="decimal"></div>
+        <div class="f"><label>Crochets par panneau</label><input data-g="hooksPP" type="number" inputmode="numeric"></div>
+      </div>
+      <p class="subh">Rail et clamps</p>
+      <div class="grid">
+        <div class="f"><label>Longueur d'un rail</label><input data-g="railL" type="number" inputmode="decimal"></div>
+        <div class="f"><label>Dépassement du rail (chaque bout)</label><input data-g="overhang" type="number" inputmode="decimal"></div>
+        <div class="f"><label>Écart entre pattes de toit</label><input data-g="footSpacing" type="number" inputmode="decimal"><small class="note">rail sur toit / tôle</small></div>
+      </div>
+      <p class="subh">Prix (facultatif)</p>
+      <div class="grid">
+        <div class="f"><label>Corner</label><input data-g="price" type="number" inputmode="decimal" placeholder="ex. 12000"></div>
+        <div class="f"><label>Rail</label><input data-g="priceRail" type="number" inputmode="decimal"></div>
+        <div class="f"><label>Clamp du milieu</label><input data-g="priceMid" type="number" inputmode="decimal"></div>
+        <div class="f"><label>Clamp d'extrémité</label><input data-g="priceEnd" type="number" inputmode="decimal"></div>
+        <div class="f"><label>Jonction de rail</label><input data-g="priceJoin" type="number" inputmode="decimal"></div>
+        <div class="f"><label>Patte de toit</label><input data-g="priceFoot" type="number" inputmode="decimal"></div>
+        <div class="f"><label>Devise</label><input data-g="cur" type="text"></div>
+      </div>
+      <div class="row-btns"><button type="button" id="resetG">Remettre les mesures par défaut</button></div>
+    </details>
+  </section>
+
+  <section class="card">
+    <button type="button" class="btn primary" id="copy">📋 Copier la liste (pour WhatsApp)</button>
+    <button type="button" class="btn primary native-only" id="wa" style="margin-top:8px;background:#1fa855">🟢 Envoyer sur WhatsApp</button>
+    <p class="note" id="copyMsg"></p>
+  </section>
+</main>
+
+<script>
+/* ---------- état ---------- */
+const GDEF={pW:115,pL:230,orient:"portrait",barL:600,legFh:55,legBh:85,footL:15,hookL:10,hooksPP:2,panelsPerLeg:2,kerf:0,
+  railL:420,overhang:5,footSpacing:120,
+  price:"",priceRail:"",priceMid:"",priceEnd:"",priceJoin:"",priceFoot:"",cur:"FCFA"};
+const SYS={
+  corner:{t:"Corner",d:"cadre en corner + crochets",note:"Tout en corner : cadre, supports, pieds. Les panneaux sont tenus par des crochets."},
+  mixte:{t:"Corner + rail",d:"pieds en corner, rails + clamps",note:"Structure (pieds, côtés, supports) en corner. Les barres A → B du haut et/ou du bas sont des rails : les panneaux sont serrés par des clamps. Réglable dans chaque cadre."},
+  rail:{t:"Rail + clamp",d:"sur toit / tôle",note:"Deux rails par rangée posés sur le toit avec des pattes, les panneaux serrés par des clamps. Pas de corner."}
+};
+const TYPES={
+  side:{name:"Côtés gauche / droite",color:"#2f6b45"},
+  end:{name:"Haut et bas en corner (A → B)",color:"#3b6ea8"},
+  mid:{name:"Supports du milieu",color:"#4f8f8a"},
+  legB:{name:"Pieds derrière",color:"#c4552f"},
+  legF:{name:"Pieds devant",color:"#d99410"},
+  hook:{name:"Crochets",color:"#9a4f9e"},
+  foot:{name:"Semelles des pieds (T)",color:"#6b7280"},
+  rail:{name:"Rails (A → B)",color:"#7b8794"}
+};
+const ORDER=["side","end","mid","legF","legB","hook","foot","rail"];
+let S={g:{...GDEF},total:2,sys:"corner",mode:"one",frames:[],show:"panels",yaw:28,pitch:28};
+
+const $=id=>document.getElementById(id);
+const fmt=x=>(Math.round(x*10)/10).toLocaleString("fr-FR");
+const money=x=>Math.round(x).toLocaleString("fr-FR");
+const clampInt=(v,min,max)=>Math.min(max,Math.max(min,Math.round(+v||0)));
+function gNum(k){const v=parseFloat(S.g[k]);return isFinite(v)?v:GDEF[k];}
+
+function save(){try{localStorage.setItem("pvfix3",JSON.stringify(S));}catch(e){}}
+function load(){try{const s=JSON.parse(localStorage.getItem("pvfix3")||localStorage.getItem("pvfix2")||"null");if(s&&s.frames&&s.frames.length){S={...S,...s,g:{...GDEF,...s.g}};return true;}}catch(e){}return false;}
+
+/* ---------- répartition ---------- */
+function rowsOf(N,s){const out=[];let left=N;while(left>0){out.push(Math.min(s,left));left-=s;}return out;}
+function partitions(N){
+  const list=[{key:"one",parts:[N]}];
+  [6,5,4,3,2].forEach(s=>{if(s<N){list.push({key:"s"+s,parts:rowsOf(N,s)});}});
+  const seen=new Set();return list.filter(p=>{const k=p.parts.join("+");if(seen.has(k))return false;seen.add(k);return true;}).slice(0,6);
+}
+const label=parts=>{
+  const allSame=parts.every(p=>p===parts[0]);
+  if(parts.length===1) return `1 rangée de ${parts[0]}`;
+  if(allSame) return `${parts.length} rangées de ${parts[0]}`;
+  return parts.join(" + ");
+};
+const newFrame=n=>({n,sys:null,top:"rail",bot:"rail",legF:null,legB:null,mid:null,hooks:null,legFh:null,legBh:null,pattes:null});
+
+/* ---------- valeurs d'un cadre (auto si non réglé) ---------- */
+function geomN(n){
+  const port=S.g.orient!=="paysage";
+  const u=port?gNum("pW"):gNum("pL"), Lf=port?gNum("pL"):gNum("pW");
+  return {u,Lf,W:n*u};
+}
+function resolve(f){
+  const sys=f.sys||S.sys,roof=sys==="rail";
+  const topRail=roof||(sys==="mixte"&&f.top!=="corner");
+  const botRail=roof||(sys==="mixte"&&f.bot!=="corner");
+  const ppl=Math.max(1,gNum("panelsPerLeg"));
+  const autoLegs=Math.max(2,Math.ceil(f.n/ppl));
+  const nRails=(topRail?1:0)+(botRail?1:0);
+  const {W}=geomN(f.n),railLen=W+2*Math.max(0,gNum("overhang"));
+  const autoPattes=roof?2*(Math.ceil(railLen/Math.max(20,gNum("footSpacing")))+1):0;
+  return {
+    n:f.n,sys,roof,topRail,botRail,nRails,railLen,
+    legF:roof?0:(f.legF??autoLegs), legB:roof?0:(f.legB??autoLegs),
+    mid:roof?0:(f.mid??Math.max(0,f.n-1)),
+    hooks:roof?0:(f.hooks??(topRail?0:f.n*Math.round(gNum("hooksPP")))),
+    legFh:f.legFh??gNum("legFh"), legBh:f.legBh??gNum("legBh"),
+    clampMid:nRails*Math.max(0,f.n-1), clampEnd:nRails*2,
+    pattes:roof?(f.pattes??autoPattes):0
+  };
+}
+const geom=r=>geomN(r.n);
+function framePieces(f,idx){
+  const r=resolve(f),{Lf,W}=geom(r),out=[];
+  const add=(type,len,qty,mat="corner")=>{for(let i=0;i<qty;i++)if(len>0)out.push({type,len,frame:idx,mat});};
+  if(!r.roof){
+    add("side",Lf,2);
+    add("end",W,2-r.nRails);
+    add("mid",Lf,r.mid);
+    add("legF",r.legFh,r.legF); add("legB",r.legBh,r.legB);
+    add("hook",gNum("hookL"),r.hooks); add("foot",gNum("footL"),r.legF+r.legB);
+  }
+  add("rail",r.railLen,r.nRails,"rail");
+  return out;
+}
+
+/* ---------- découpe ---------- */
+function pack(items,barL,kerf,best){
+  const bars=[];
+  items.forEach(it=>{
+    let tgt=null,bl=Infinity;
+    for(const b of bars){
+      const left=b.free-it.len-(b.items.length?kerf:0);
+      if(left>=-1e-9){ if(!best){tgt=b;break;} if(left<bl){bl=left;tgt=b;} }
+    }
+    if(!tgt){tgt={items:[],free:barL};bars.push(tgt);}
+    tgt.free-=it.len+(tgt.items.length?kerf:0);tgt.items.push(it);
+  });
+  return bars;
+}
+function planMat(raw,barL,kerf){
+  let bestRes=null;
+  for(const strat of ["max","equal"]){
+    let welds=0;const items=[];
+    raw.forEach(p=>{
+      if(p.len<=barL){items.push(p);return;}
+      if(strat==="max"){let rest=p.len;while(rest>barL){items.push({...p,len:barL,part:true});rest-=barL;welds++;}if(rest>0.01)items.push({...p,len:rest,part:true});else welds--;}
+      else{const m=Math.ceil(p.len/barL-1e-9);for(let i=0;i<m;i++)items.push({...p,len:p.len/m,part:true});welds+=m-1;}
+    });
+    items.sort((a,b)=>b.len-a.len);
+    for(const bf of [true,false]){
+      const bars=pack(items,barL,kerf,bf);
+      if(!bestRes||bars.length<bestRes.bars.length||(bars.length===bestRes.bars.length&&welds<bestRes.welds))bestRes={bars,welds};
+    }
+  }
+  if(!bestRes)bestRes={bars:[],welds:0};
+  bestRes.raw=raw;bestRes.barL=barL;
+  bestRes.total=raw.reduce((s,p)=>s+p.len,0);
+  bestRes.waste=bestRes.bars.length*barL-bestRes.total;
+  return bestRes;
+}
+function plan(frames){
+  const raw=frames.flatMap((f,i)=>framePieces(f,i));
+  const kerf=Math.max(0,gNum("kerf"))/10;
+  const corner=planMat(raw.filter(p=>p.mat==="corner"),Math.max(1,gNum("barL")),kerf);
+  const rail=planMat(raw.filter(p=>p.mat==="rail"),Math.max(1,gNum("railL")),kerf);
+  const rs=frames.map(resolve);
+  const acc={
+    clampMid:rs.reduce((s,r)=>s+r.clampMid,0),
+    clampEnd:rs.reduce((s,r)=>s+r.clampEnd,0),
+    joins:rail.welds,
+    pattes:rs.reduce((s,r)=>s+r.pattes,0),
+    legs:rs.reduce((s,r)=>s+r.legF+r.legB,0),
+    hooks:rs.reduce((s,r)=>s+r.hooks,0)
+  };
+  return {corner,rail,acc,raw};
+}
+function costOf(p){
+  const pr=k=>{const v=parseFloat(S.g[k]);return isFinite(v)&&v>0?v:null;};
+  const lines=[[pr("price"),p.corner.bars.length],[pr("priceRail"),p.rail.bars.length],[pr("priceMid"),p.acc.clampMid],[pr("priceEnd"),p.acc.clampEnd],[pr("priceJoin"),p.acc.joins],[pr("priceFoot"),p.acc.pattes]];
+  let any=false,t=0;lines.forEach(([v,q])=>{if(v!==null&&q>0){any=true;t+=v*q;}});
+  return any?t:null;
+}
+
+/* ---------- dessin 3D réaliste ---------- */
+function draw3D(f,idx){
+  const r=resolve(f),{u,Lf,W}=geom(r);
+  const roof=r.roof;
+  const hF=roof?14:r.legFh,hB=roof?14:r.legBh,dz=hB-hF,D=Math.sqrt(Math.max(Lf*Lf-dz*dz,100));
+  const th=S.yaw*Math.PI/180,ph=S.pitch*Math.PI/180,ct=Math.cos(th),st=Math.sin(th),cp=Math.cos(ph),sp=Math.sin(ph);
+  const P=(x,y,z)=>{const xr=x*ct-y*st,yr=x*st+y*ct;return [xr,-(z*cp+yr*sp)];};
+  const F=(x,t,off=0)=>[x,t*D,hF+t*dz+off];
+  const prims=[];
+  const steel=(a,b,cls)=>prims.push({k:"steel",pts:[a,b],cls});
+  const xs=c=>c<=1?[W/2]:Array.from({length:c},(_,i)=>i*W/(c-1));
+  const ft=gNum("footL")/2,ov=Math.max(0,gNum("overhang"));
+  if(roof){
+    // tôle ondulée
+    prims.push({k:"poly",pts:[[-60,-50,0],[W+60,-50,0],[W+60,D+50,0],[-60,D+50,0]],fill:"#b9c0c6"});
+    for(let x=-60;x<=W+60;x+=18)prims.push({k:"line",pts:[[x,-50,0],[x,D+50,0]],stroke:"rgba(90,100,110,.35)"});
+  } else prims.push({k:"poly",pts:[[-15,-25,0],[W+15,-25,0],[W+15,D+25,0],[-15,D+25,0]],fill:"rgba(0,0,0,.13)"});
+  const railT=roof?[0.22,0.78]:[...(r.botRail?[0]:[]),...(r.topRail?[1]:[])];
+  if(roof){
+    const n=Math.max(2,Math.round(r.pattes/2)),xsP=Array.from({length:n},(_,i)=>-ov+i*(W+2*ov)/(n-1));
+    railT.forEach(t=>xsP.forEach(x=>{steel([x,t*D-6,0],[x,t*D+6,0],"patte");steel([x,t*D,0],F(x,t,-2),"patte");}));
+  } else {
+    xs(r.legB).forEach(x=>{steel([x,D-ft,0],[x,D+ft,0],"foot");steel([x,D,0],[x,D,hB],"leg");});
+    if(!r.topRail) steel(F(0,1),F(W,1),"frame");
+    steel(F(0,0),F(0,1),"frame"); steel(F(W,0),F(W,1),"frame");
+    const mids=r.mid===r.n-1?Array.from({length:r.mid},(_,i)=>(i+1)*u):Array.from({length:r.mid},(_,i)=>(i+1)*W/(r.mid+1));
+    mids.forEach(x=>steel(F(x,0),F(x,1),"frame"));
+    if(!r.botRail) steel(F(0,0),F(W,0),"frame");
+  }
+  railT.forEach(t=>steel(F(-ov,t,1.5),F(W+ov,t,1.5),"rail"));
+  for(let i=0;i<r.n;i++){
+    const x0=i*u+1.2,x1=(i+1)*u-1.2,o=5;
+    prims.push({k:"panel",pts:[F(x0,0.005,o),F(x1,0.005,o),F(x1,.995,o),F(x0,.995,o)],x0,x1,o});
+  }
+  // clamps (sur les rails, au-dessus des panneaux)
+  railT.forEach(t=>{
+    const tt=roof?t:(t===0?0.02:0.98);
+    for(let i=0;i<=r.n;i++){const x=i===0?2:i===r.n?W-2:i*u;prims.push({k:"clamp",pts:[F(x-3,tt-0.03,7),F(x+3,tt-0.03,7),F(x+3,tt+0.03,7),F(x-3,tt+0.03,7)],end:i===0||i===r.n});}
+  });
+  const hk=gNum("hookL");
+  if(r.hooks>0) Array.from({length:r.hooks},(_,i)=>(i+.5)*W/r.hooks).forEach(x=>{
+    prims.push({k:"hook",pts:[F(x,1,0),F(x,1,7),F(x,1-Math.min(hk,12)/Lf*.6,7)]});
+  });
+  if(!roof) xs(r.legF).forEach(x=>{steel([x,-ft,0],[x,ft,0],"foot");steel([x,0,0],[x,0,hF],"leg");});
+
+  const all=[];prims.forEach(p=>p.pts.forEach(q=>all.push(P(...q))));
+  const minX=Math.min(...all.map(a=>a[0])),maxX=Math.max(...all.map(a=>a[0])),minY=Math.min(...all.map(a=>a[1])),maxY=Math.max(...all.map(a=>a[1]));
+  const VW=640,VH=330,pad=38,sc=Math.min((VW-2*pad)/(maxX-minX||1),(VH-2*pad)/(maxY-minY||1));
+  const ox=(VW-(maxX-minX)*sc)/2-minX*sc, oy=(VH-(maxY-minY)*sc)/2-minY*sc;
+  const S2=q=>{const a=P(...q);return [(a[0]*sc+ox).toFixed(1),(a[1]*sc+oy).toFixed(1)];};
+  const pts=arr=>arr.map(q=>S2(q).join(",")).join(" ");
+  const sw=Math.max(2.2,3.5*sc),showP=S.show==="panels";
+  const id="g"+idx;
+  let s=`<svg viewBox="0 0 ${VW} ${VH}" xmlns="http://www.w3.org/2000/svg"><defs>
+    <linearGradient id="${id}p" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#2b4c7e"/><stop offset=".55" stop-color="#14254a"/><stop offset="1" stop-color="#0d1a36"/></linearGradient>
+    <linearGradient id="${id}s" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="rgba(255,255,255,.35)"/><stop offset=".4" stop-color="rgba(255,255,255,0)"/></linearGradient></defs>`;
+  prims.forEach(p=>{
+    if(p.k==="poly") s+=`<polygon points="${pts(p.pts)}" fill="${p.fill}"/>`;
+    else if(p.k==="line"){const [a,b]=p.pts.map(S2);s+=`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="${p.stroke}" stroke-width="1.2"/>`;}
+    else if(p.k==="steel"){
+      const [a,b]=p.pts.map(S2);
+      if(p.cls==="rail"){
+        const w=Math.max(3.5,5*sc);
+        s+=`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#6c7680" stroke-width="${w}" stroke-linecap="butt"/>`;
+        s+=`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#e3e8ec" stroke-width="${(w*.5).toFixed(1)}"/>`;
+      } else {
+        const w=p.cls==="foot"?sw*1.25:p.cls==="patte"?sw*.8:sw;
+        s+=`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#4b5259" stroke-width="${w}" stroke-linecap="square"/>`;
+        s+=`<line x1="${a[0]}" y1="${a[1]}" x2="${b[0]}" y2="${b[1]}" stroke="#b8bfc6" stroke-width="${(w*.45).toFixed(1)}" opacity=".9"/>`;
+      }
+    }
+    else if(p.k==="panel"){
+      if(showP){
+        s+=`<polygon points="${pts(p.pts)}" fill="url(#${id}p)" stroke="#d5dadf" stroke-width="${Math.max(1.2,2.5*sc)}" stroke-linejoin="round"/>`;
+        const port=S.g.orient!=="paysage",cols=port?6:12,rows=port?12:6;let g="";
+        for(let c=1;c<cols;c++){const x=p.x0+(p.x1-p.x0)*c/cols;g+=`M${S2(F(x,.01,p.o)).join(",")}L${S2(F(x,.99,p.o)).join(",")}`;}
+        for(let rr=1;rr<rows;rr++){const t=rr/rows;g+=`M${S2(F(p.x0,t,p.o)).join(",")}L${S2(F(p.x1,t,p.o)).join(",")}`;}
+        s+=`<path d="${g}" stroke="rgba(160,190,235,.28)" stroke-width=".7" fill="none"/>`;
+        s+=`<polygon points="${pts(p.pts)}" fill="url(#${id}s)"/>`;
+      } else s+=`<polygon points="${pts(p.pts)}" fill="rgba(59,110,168,.10)" stroke="#3b6ea8" stroke-width="1" stroke-dasharray="5 4"/>`;
+    }
+    else if(p.k==="clamp"){ if(showP) s+=`<polygon points="${pts(p.pts)}" fill="${p.end?"#2b2f33":"#9aa3ab"}" stroke="#1d2125" stroke-width=".8"/>`; }
+    else if(p.k==="hook"){s+=`<polyline points="${pts(p.pts)}" fill="none" stroke="#9a4f9e" stroke-width="${Math.max(2,sw*.8)}" stroke-linejoin="round"/>`;}
+  });
+  const tx=(q,txt,anchor="middle",col="#1d2a22")=>{const a=S2(q);return `<text x="${a[0]}" y="${a[1]}" font-size="14" font-weight="700" text-anchor="${anchor}" fill="${col}" stroke="#fff" stroke-width="3.5" paint-order="stroke">${txt}</text>`;};
+  s+=tx([W/2,roof?-60:-38,0],`A → B : ${fmt(W)} cm`);
+  s+=tx([-14,D/2,(hF+hB)/2+10],`${fmt(Lf)} cm`,"end");
+  if(!roof){
+    s+=tx([xs(r.legF)[0]-10,0,hF/2],`${fmt(hF)}`,"end","#a86f00");
+    s+=tx([xs(r.legB).slice(-1)[0]+12,D,hB/2],`${fmt(hB)}`,"start","#b0442b");
+  }
+  if(r.nRails) s+=tx(F(W+ov+6,railT[railT.length-1],4),`rail ${fmt(r.railLen)}`,"start","#4a5560");
+  s+=`</svg>`;
+  return s;
+}
+
+/* ---------- vue de côté ---------- */
+function drawSide(f){
+  const r=resolve(f),{Lf}=geom(r),roof=r.roof;
+  const hF=roof?14:r.legFh,hB=roof?14:r.legBh,dz=hB-hF,D=Math.sqrt(Math.max(Lf*Lf-dz*dz,100));
+  const ang=Math.atan2(dz,D)*180/Math.PI,ft=gNum("footL");
+  const VW=640,VH=210,padL=70,padR=70,padT=34,padB=46;
+  const sc=Math.min((VW-padL-padR)/(D+ft),(VH-padT-padB)/(Math.max(hB,hF,40)+10));
+  const X=y=>padL+(y+ft/2)*sc,Y=z=>VH-padB-z*sc;
+  const st=(x1,y1,x2,y2,w=6)=>`<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#4b5259" stroke-width="${w}" stroke-linecap="square"/><line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" stroke="#b8bfc6" stroke-width="${w*.4}"/>`;
+  const railBox=(y,z)=>`<rect x="${X(y)-7}" y="${Y(z)-12}" width="14" height="12" rx="2" fill="#dde3e8" stroke="#6c7680" stroke-width="2"/><rect x="${X(y)-8}" y="${Y(z)-19}" width="16" height="6" rx="1" fill="#2b2f33"/>`;
+  const t=(x,y,txt,a="middle",c="currentColor")=>`<text x="${x}" y="${y}" font-size="14" font-weight="700" text-anchor="${a}" fill="${c}">${txt}</text>`;
+  let s=`<svg viewBox="0 0 ${VW} ${VH}" style="color:var(--ink)">`;
+  s+=`<rect x="0" y="${Y(0)}" width="${VW}" height="${padB}" fill="${roof?"rgba(120,130,140,.35)":"rgba(140,120,90,.22)"}"/>`;
+  if(roof){
+    [0.22,0.78].forEach(tt=>{const y=tt*D;s+=st(X(y)-12,Y(0)-2,X(y)+12,Y(0)-2,5)+st(X(y),Y(0),X(y),Y(hF-12),5);});
+    s+=`<rect x="${X(0)}" y="${Y(hF)-6}" width="${X(D)-X(0)}" height="7" fill="#1a2f5c" stroke="#d5dadf" stroke-width="1.5"/>`;
+    [0.22,0.78].forEach(tt=>s+=railBox(tt*D,hF-5));
+    s+=t((X(0)+X(D))/2,Y(hF)-24,`${fmt(Lf)} cm · 2 rails · pattes tous les ${fmt(gNum("footSpacing"))} cm`);
+    s+=t((X(0)+X(D))/2,VH-14,"rails posés sur le toit (tôle) avec des pattes","middle","var(--muted)");
+  } else {
+    s+=st(X(-ft/2),Y(0)-2,X(ft/2),Y(0)-2,7)+st(X(D-ft/2),Y(0)-2,X(D+ft/2),Y(0)-2,7);
+    s+=st(X(0),Y(0),X(0),Y(hF))+st(X(D),Y(0),X(D),Y(hB));
+    s+=`<polygon points="${X(0)},${Y(hF)-4} ${X(D)},${Y(hB)-4} ${X(D)},${Y(hB)-11} ${X(0)},${Y(hF)-11}" fill="#1a2f5c" stroke="#d5dadf" stroke-width="1.5"/>`;
+    s+=st(X(0),Y(hF),X(D),Y(hB),7);
+    if(r.botRail) s+=railBox(0,hF+2);
+    if(r.topRail) s+=railBox(D,hB+2);
+    else s+=`<polyline points="${X(D)},${Y(hB)} ${X(D)+2},${Y(hB)-14} ${X(D)-12},${Y(hB)-14}" fill="none" stroke="#9a4f9e" stroke-width="4"/>`;
+    s+=t(X(0)-12,Y(hF/2)+5,`${fmt(hF)} cm`,"end","#a86f00");
+    s+=t(X(D)+12,Y(hB/2)+5,`${fmt(hB)} cm`,"start","#b0442b");
+    s+=t((X(0)+X(D))/2,(Y(hF)+Y(hB))/2-22,`${fmt(Lf)} cm · inclinaison ≈ ${fmt(ang)}°`);
+    s+=t((X(0)+X(D))/2,VH-14,`bas : ${r.botRail?"rail + clamps":"corner"} · haut : ${r.topRail?"rail + clamps":"corner + crochets"}`,"middle","var(--muted)");
+    s+=t(X(0),Y(0)+18,"devant","middle","var(--muted)")+t(X(D),Y(0)+18,"derrière","middle","var(--muted)");
+  }
+  s+=`</svg>`;return s;
+}
+
+/* ---------- rendu ---------- */
+function setPartition(parts,mode){
+  S.mode=mode;
+  const old=S.frames;
+  S.frames=parts.map((n,i)=>{const f=newFrame(n);if(old[i]){f.sys=old[i].sys;f.top=old[i].top;f.bot=old[i].bot;}return f;});
+  S.total=parts.reduce((a,b)=>a+b,0);
+  renderAll();
+}
+function matLabel(p){
+  const a=[];
+  if(p.corner.bars.length)a.push(`${p.corner.bars.length} corners`);
+  if(p.rail.bars.length)a.push(`${p.rail.bars.length} rails`);
+  return a.join(" + ")||"—";
+}
+function renderSys(){
+  $("sysChoice").innerHTML=Object.entries(SYS).map(([k,v])=>`<button type="button" data-sys="${k}" class="${S.sys===k?"on":""}">${v.t}<small>${v.d}</small></button>`).join("");
+  $("sysNote").textContent=SYS[S.sys].note;
+  document.querySelectorAll("[data-sys]").forEach(b=>b.onclick=()=>{S.sys=b.dataset.sys;S.frames.forEach(f=>f.sys=null);renderSys();renderAll();});
+}
+function renderChips(){
+  const parts=partitions(S.total);
+  const res=parts.map(p=>{const fr=p.parts.map((n,i)=>{const f=newFrame(n);const o=S.frames[i];if(o){f.top=o.top;f.bot=o.bot;}return f;});const pl=plan(fr);return {...p,pl,score:pl.corner.bars.length+pl.rail.bars.length};});
+  const min=Math.min(...res.map(r=>r.score));
+  const cur=S.frames.map(f=>f.n).join("+");
+  $("chips").innerHTML=res.map(p=>`<button type="button" class="chip ${p.parts.join("+")===cur?"on":""}" data-parts="${p.parts.join("+")}" data-key="${p.key}">
+    <b>${label(p.parts)}</b><span class="${p.score===min?"best":""}">${matLabel(p.pl)}${p.score===min?" ✓":""}</span></button>`).join("");
+  document.querySelectorAll(".chip").forEach(b=>b.onclick=()=>setPartition(b.dataset.parts.split("+").map(Number),b.dataset.key));
+}
+function fieldsFor(r){
+  if(r.roof) return [["n","Panneaux dans ce cadre"],["pattes","Pattes de toit","pour les 2 rails"]];
+  const L=[["n","Panneaux dans ce cadre"],["legF","Pieds devant"],["legFh","Hauteur pied devant","cm"],["legB","Pieds derrière"],["legBh","Hauteur pied derrière","cm"],["mid","Supports du milieu","en bas, sous les panneaux"]];
+  if(!r.topRail) L.push(["hooks","Crochets","tiennent les panneaux en haut"]);
+  return L;
+}
+function renderFrames(){
+  let h="";
+  S.frames.forEach((f,i)=>{
+    const r=resolve(f);
+    h+=`<section class="card" id="fr${i}">
+      <div class="frame-h"><h3>Cadre ${i+1} · ${f.n} panneau${f.n>1?"x":""}</h3><span class="dim" id="dim${i}"></span></div>
+      <div class="seg3" style="margin-top:10px">${Object.entries(SYS).map(([k,v])=>`<button type="button" data-fsys="${i}" data-v="${k}" class="${r.sys===k?"on":""}">${v.t}</button>`).join("")}</div>`;
+    if(r.sys==="mixte"){
+      h+=`<div class="params">
+        <label>Barre du bas (devant)</label><div class="seg2">${["rail","corner"].map(v=>`<button type="button" data-side="bot" data-f="${i}" data-v="${v}" class="${(f.bot||"rail")===v?"on":""}">${v==="rail"?"Rail":"Corner"}</button>`).join("")}</div>
+        <label>Barre du haut (derrière)</label><div class="seg2">${["rail","corner"].map(v=>`<button type="button" data-side="top" data-f="${i}" data-v="${v}" class="${(f.top||"rail")===v?"on":""}">${v==="rail"?"Rail":"Corner"}</button>`).join("")}</div>
+      </div>`;
+    }
+    h+=`<div class="view" data-view="${i}">${draw3D(f,i)}<span class="hint">↔ glissez pour tourner</span></div>
+      <div class="tabs"><button type="button" data-show="panels" class="${S.show==="panels"?"on":""}">Avec panneaux</button><button type="button" data-show="struct" class="${S.show!=="panels"?"on":""}">Structure seule</button></div>
+      <div class="side" id="side${i}">${drawSide(f)}</div>
+      <div class="params">`;
+    fieldsFor(r).forEach(([k,lbl,sub])=>{
+      const isAuto=k!=="n"&&f[k]==null;const step=(k==="legFh"||k==="legBh")?5:1;
+      h+=`<label>${lbl}${isAuto?'<span class="auto">AUTO</span>':""}${sub?`<small>${sub}</small>`:""}</label>
+        <div class="stepper sm"><button type="button" data-f="${i}" data-k="${k}" data-d="-${step}">−</button><input type="number" inputmode="decimal" data-f="${i}" data-k="${k}" value="${k==="n"?f.n:r[k]}"><button type="button" data-f="${i}" data-k="${k}" data-d="${step}">+</button></div>`;
+      if(k==="n"||k==="legBh") h+=`<div class="sep"></div>`;
+    });
+    h+=`</div>
+      <div id="pcs${i}"></div>
+      <div class="row-btns"><button type="button" data-auto="${i}">↺ Valeurs auto</button>${S.frames.length>1?`<button type="button" data-del="${i}">🗑 Supprimer ce cadre</button>`:""}</div>
+    </section>`;
+  });
+  h+=`<div class="row-btns" style="margin:-4px 0 12px"><button type="button" id="addFrame">＋ Ajouter un cadre</button></div>`;
+  $("frames").innerHTML=h;
+  bindFrames();
+}
+function accRows(r){
+  const L=[];
+  if(r.clampMid)L.push(["Clamps du milieu",r.clampMid]);
+  if(r.clampEnd)L.push(["Clamps d'extrémité",r.clampEnd]);
+  if(r.pattes)L.push(["Pattes de toit",r.pattes]);
+  return L;
+}
+function updateFrameViews(){
+  S.frames.forEach((f,i)=>{
+    const v=document.querySelector(`[data-view="${i}"]`);if(!v)return;
+    v.innerHTML=draw3D(f,i)+'<span class="hint">↔ glissez pour tourner</span>';
+    $("side"+i).innerHTML=drawSide(f);
+    const r=resolve(f),{W,Lf}=geom(r);
+    $("dim"+i).textContent=`${fmt(W)} × ${fmt(Lf)} cm`;
+    const pcs=framePieces(f,i),g={};pcs.forEach(p=>{const k=p.type+"|"+p.len;g[k]=g[k]||{...p,q:0};g[k].q++;});
+    const lim=t=>t==="rail"?gNum("railL"):gNum("barL");
+    $("pcs"+i).innerHTML=`<table style="margin-top:10px"><tr><th>Pièces de ce cadre</th><th class="n">Long.</th><th class="n">Nb</th></tr>${Object.values(g).sort((a,b)=>ORDER.indexOf(a.type)-ORDER.indexOf(b.type)).map(p=>`<tr><td><span class="dot" style="background:${TYPES[p.type].color}"></span>${TYPES[p.type].name}${p.len>lim(p.type)?" ⚠️":""}</td><td class="n">${fmt(p.len)} cm</td><td class="n"><b>${p.q}</b></td></tr>`).join("")}${accRows(r).map(([n,q])=>`<tr><td><span class="dot" style="background:#2b2f33"></span>${n}</td><td class="n">—</td><td class="n"><b>${q}</b></td></tr>`).join("")}</table>`;
+    document.querySelectorAll(`input[data-f="${i}"]`).forEach(inp=>{if(document.activeElement!==inp){const k=inp.dataset.k;inp.value=k==="n"?f.n:r[k];}});
+  });
+}
+function cutHTML(pm,title){
+  if(!pm.bars.length)return "";
+  return `<h4 class="cut">${title} (${fmt(pm.barL/100)} m) : ${pm.bars.length}</h4>`+pm.bars.map((b,i)=>`<div class="bar"><div class="t">${title.replace(/s$/,"")} ${i+1}<span>reste ${fmt(b.free)} cm</span></div><div class="track">${
+    b.items.map(it=>{const w=it.len/pm.barL*100;return `<div class="seg" style="width:${w}%;background:${TYPES[it.type].color}" title="${TYPES[it.type].name} – cadre ${it.frame+1}">${w>7?`<span>${fmt(it.len)}${it.part?"*":""}${w>11&&S.frames.length>1?`<small>C${it.frame+1}</small>`:""}</span>`:""}</div>`;}).join("")}</div></div>`).join("");
+}
+function renderResult(){
+  const p=plan(S.frames),a=p.acc,cost=costOf(p);
+  const k=(v,lbl,main)=>v?`<div class="${main?"main":""}"><b>${v}</b><span>${lbl}</span></div>`:"";
+  let h=`<h2>Résultat · ${S.total} panneaux · ${label(S.frames.map(f=>f.n))}</h2><div class="kpi">`;
+  h+=k(p.corner.bars.length,`corners de ${fmt(p.corner.barL/100)} m à acheter`,true);
+  h+=k(p.rail.bars.length,`rails de ${fmt(p.rail.barL/100)} m à acheter`,true);
+  h+=k(S.frames.length,`cadre${S.frames.length>1?"s":""}`);
+  h+=k(a.legs,"pieds")+k(a.hooks,"crochets")+k(a.clampMid,"clamps du milieu")+k(a.clampEnd,"clamps d'extrémité")+k(a.joins,"jonctions de rail")+k(a.pattes,"pattes de toit");
+  h+=`</div>`;
+  if(cost!==null) h+=`<p style="margin:12px 0 0;font-size:18px"><b>Coût du matériel : ${money(cost)} ${S.g.cur||""}</b></p>`;
+  const g={};p.raw.forEach(x=>{const kk=x.type+"|"+x.len;g[kk]=g[kk]||{...x,q:0};g[kk].q++;});
+  h+=`<table style="margin-top:12px"><tr><th>Toutes les pièces</th><th class="n">Longueur</th><th class="n">Nombre</th></tr>`;
+  Object.values(g).sort((x,y)=>ORDER.indexOf(x.type)-ORDER.indexOf(y.type)||y.len-x.len).forEach(x=>{h+=`<tr><td><span class="dot" style="background:${TYPES[x.type].color}"></span>${TYPES[x.type].name}</td><td class="n">${fmt(x.len)} cm</td><td class="n"><b>${x.q}</b></td></tr>`;});
+  [["Clamps du milieu",a.clampMid],["Clamps d'extrémité",a.clampEnd],["Jonctions de rail",a.joins],["Pattes de toit",a.pattes]].forEach(([n,q])=>{if(q)h+=`<tr><td><span class="dot" style="background:#2b2f33"></span>${n}</td><td class="n">—</td><td class="n"><b>${q}</b></td></tr>`;});
+  h+=`</table>`;
+  if(p.corner.bars.length)h+=`<p class="note">Corner utilisé : ${fmt(p.corner.total/100)} m · chute : ${fmt(p.corner.waste/100)} m</p>`;
+  if(p.rail.bars.length)h+=`<p class="note">Rail utilisé : ${fmt(p.rail.total/100)} m · chute : ${fmt(p.rail.waste/100)} m</p>`;
+  if(p.corner.welds>0) h+=`<div class="warn">🔧 Des pièces en corner dépassent ${fmt(p.corner.barL)} cm : <b>${p.corner.welds} soudure${p.corner.welds>1?"s":""} de raccord</b>.</div>`;
+  if(a.joins>0) h+=`<div class="warn">🔗 Des rails dépassent ${fmt(p.rail.barL)} cm : <b>${a.joins} jonction${a.joins>1?"s":""} de rail</b> à prévoir.</div>`;
+  $("result").innerHTML=h;
+  $("plan").innerHTML=cutHTML(p.corner,"Corners")+cutHTML(p.rail,"Rails")
+    +((p.corner.welds||a.joins)?`<p class="note">* morceau à raccorder (soudure ou jonction).</p>`:"");
+  const used=new Set(p.raw.map(x=>x.type));
+  $("legend").innerHTML=ORDER.filter(t=>used.has(t)).map(t=>`<span><span class="dot" style="background:${TYPES[t].color}"></span>${TYPES[t].name}</span>`).join("");
+}
+function update(){save();$("total").value=S.total;renderChips();renderResult();updateFrameViews();}
+function renderAll(){renderFrames();update();}
+
+/* ---------- événements ---------- */
+function bindFrames(){
+  document.querySelectorAll(".stepper.sm button").forEach(b=>b.onclick=()=>{
+    const f=S.frames[+b.dataset.f],k=b.dataset.k,r=resolve(f),d=+b.dataset.d;
+    setField(+b.dataset.f,k,(k==="n"?f.n:r[k])+d);
+  });
+  document.querySelectorAll(".stepper.sm input").forEach(inp=>inp.oninput=()=>{if(inp.value!=="")setField(+inp.dataset.f,inp.dataset.k,+inp.value);});
+  document.querySelectorAll("[data-fsys]").forEach(b=>b.onclick=()=>{const f=S.frames[+b.dataset.fsys];f.sys=b.dataset.v===S.sys?null:b.dataset.v;f.hooks=null;f.pattes=null;renderAll();});
+  document.querySelectorAll("[data-side]").forEach(b=>b.onclick=()=>{const f=S.frames[+b.dataset.f];f[b.dataset.side]=b.dataset.v;f.hooks=null;renderAll();});
+  document.querySelectorAll("[data-auto]").forEach(b=>b.onclick=()=>{const o=S.frames[+b.dataset.auto],f=newFrame(o.n);f.sys=o.sys;f.top=o.top;f.bot=o.bot;S.frames[+b.dataset.auto]=f;renderAll();});
+  document.querySelectorAll("[data-del]").forEach(b=>b.onclick=()=>{S.frames.splice(+b.dataset.del,1);S.total=S.frames.reduce((a,f)=>a+f.n,0);S.mode="custom";renderAll();});
+  $("addFrame").onclick=()=>{S.frames.push(newFrame(2));S.total+=2;S.mode="custom";renderAll();setTimeout(()=>$("fr"+(S.frames.length-1)).scrollIntoView({behavior:"smooth"}),50);};
+  document.querySelectorAll("[data-show]").forEach(b=>b.onclick=()=>{S.show=b.dataset.show;document.querySelectorAll("[data-show]").forEach(x=>x.classList.toggle("on",x.dataset.show===S.show));update();});
+  document.querySelectorAll(".view").forEach(v=>{
+    let sx=null,y0=0;
+    v.onpointerdown=e=>{sx=e.clientX;y0=S.yaw;v.setPointerCapture(e.pointerId);};
+    v.onpointermove=e=>{if(sx===null)return;S.yaw=Math.max(-75,Math.min(75,y0+(e.clientX-sx)*0.35));S.frames.forEach((f,i)=>{const vv=document.querySelector(`[data-view="${i}"]`);if(vv)vv.innerHTML=draw3D(f,i)+'<span class="hint">↔ glissez pour tourner</span>';});};
+    v.onpointerup=v.onpointercancel=()=>{sx=null;save();};
+  });
+}
+function setField(i,k,v){
+  const f=S.frames[i];
+  if(k==="n"){f.n=clampInt(v,1,40);S.total=S.frames.reduce((a,x)=>a+x.n,0);S.mode="custom";
+    const h=document.querySelector(`#fr${i} h3`);if(h)h.textContent=`Cadre ${i+1} · ${f.n} panneau${f.n>1?"x":""}`;}
+  else if(k==="legFh"||k==="legBh") f[k]=Math.max(0,Math.min(500,+v||0));
+  else f[k]=clampInt(v,0,200);
+  const lab=document.querySelector(`#fr${i} input[data-k="${k}"]`)?.closest(".stepper")?.previousElementSibling;
+  lab?.querySelector(".auto")?.remove();
+  update();
+}
+function changeTotal(n){
+  n=clampInt(n,1,200);
+  const parts=/^s\d+$/.test(S.mode)?rowsOf(n,+S.mode.slice(1)):[n];
+  if(!/^s\d+$/.test(S.mode))S.mode="one";
+  setPartition(parts,S.mode);
+}
+$("totMinus").onclick=()=>changeTotal(S.total-1);
+$("totPlus").onclick=()=>changeTotal(S.total+1);
+$("total").addEventListener("change",e=>changeTotal(+e.target.value));
+$("customGo").onclick=()=>{
+  const parts=($("customIn").value.match(/\d+/g)||[]).map(Number).filter(x=>x>0).slice(0,30);
+  if(parts.length){setPartition(parts.map(x=>Math.min(40,x)),"custom");$("customIn").blur();}
+};
+$("customIn").addEventListener("keydown",e=>{if(e.key==="Enter")$("customGo").click();});
+document.querySelectorAll("[data-g]").forEach(el=>{
+  el.addEventListener("input",()=>{S.g[el.dataset.g]=el.value;update();});
+});
+$("resetG").onclick=()=>{S.g={...GDEF};document.querySelectorAll("[data-g]").forEach(el=>el.value=S.g[el.dataset.g]);renderAll();};
+
+const NATIVE=!!window.Natif;
+if(NATIVE)document.body.classList.add("native");
+function natif(o){if(!NATIVE)return false;try{window.Natif.postMessage(JSON.stringify(o));return true;}catch(e){return false;}}
+window.setAppVersion=v=>{$("ver").textContent="Version "+v;};
+$("updBtn").onclick=()=>natif({a:"update"});
+$("wa").onclick=()=>natif({a:"whatsapp",t:listText()});
+$("copy").onclick=async()=>{
+  const t=listText();
+  if(natif({a:"copy",t})){$("copyMsg").textContent="✅ Copié ! Collez dans WhatsApp ou SMS.";return;}
+  try{await navigator.clipboard.writeText(t);$("copyMsg").textContent="✅ Copié ! Collez dans WhatsApp ou SMS.";}
+  catch(e){$("copyMsg").innerHTML="Sélectionnez et copiez le texte :<br><textarea style='width:100%;height:200px'>"+t.replace(/</g,"&lt;")+"</textarea>";}
+};
+function listText(){
+  const p=plan(S.frames),a=p.acc;
+  let t=`*Fixation ${S.total} panneaux – ${label(S.frames.map(f=>f.n))}*\n`;
+  if(p.corner.bars.length)t+=`Corners de ${fmt(p.corner.barL/100)} m à acheter : *${p.corner.bars.length}*\n`;
+  if(p.rail.bars.length)t+=`Rails de ${fmt(p.rail.barL/100)} m à acheter : *${p.rail.bars.length}*\n`;
+  if(a.clampMid)t+=`Clamps du milieu : *${a.clampMid}*\n`;
+  if(a.clampEnd)t+=`Clamps d'extrémité : *${a.clampEnd}*\n`;
+  if(a.joins)t+=`Jonctions de rail : *${a.joins}*\n`;
+  if(a.pattes)t+=`Pattes de toit : *${a.pattes}*\n`;
+  S.frames.forEach((f,i)=>{const r=resolve(f),{W,Lf}=geom(r);
+    t+=`\nCadre ${i+1} (${f.n} panneaux, ${fmt(W)} × ${fmt(Lf)} cm, ${SYS[r.sys].t}) :\n`;
+    if(!r.roof){
+      t+=`- Côtés : 2 × ${fmt(Lf)}\n`;
+      if(2-r.nRails>0)t+=`- ${r.nRails?"Barre A→B en corner":"Haut et bas"} : ${2-r.nRails} × ${fmt(W)}\n`;
+      if(r.mid)t+=`- Supports milieu : ${r.mid} × ${fmt(Lf)}\n`;
+      t+=`- Pieds devant : ${r.legF} × ${fmt(r.legFh)}\n- Pieds derrière : ${r.legB} × ${fmt(r.legBh)}\n`;
+      if(r.hooks)t+=`- Crochets : ${r.hooks} × ${fmt(gNum("hookL"))}\n`;
+      t+=`- Semelles : ${r.legF+r.legB} × ${fmt(gNum("footL"))}\n`;
+    }
+    if(r.nRails)t+=`- Rails : ${r.nRails} × ${fmt(r.railLen)} (clamps : ${r.clampMid} milieu + ${r.clampEnd} extrémité)\n`;
+    if(r.pattes)t+=`- Pattes de toit : ${r.pattes}\n`;
+  });
+  const cut=(pm,n)=>pm.bars.map((b,i)=>`${n} ${i+1} : ${b.items.map(x=>fmt(x.len)).join(" + ")} (reste ${fmt(b.free)})`).join("\n");
+  if(p.corner.bars.length)t+=`\nCoupe des corners :\n${cut(p.corner,"Corner")}\n`;
+  if(p.rail.bars.length)t+=`\nCoupe des rails :\n${cut(p.rail,"Rail")}\n`;
+  if(p.corner.welds)t+=`Soudures de raccord : ${p.corner.welds}\n`;
+  const c=costOf(p);if(c!==null)t+=`\nCoût du matériel : ${money(c)} ${S.g.cur}`;
+  return t;
+}
+
+if(!load()){S.frames=[newFrame(2)];S.total=2;}
+S.frames=S.frames.map(f=>({...newFrame(f.n),...f}));
+if(!SYS[S.sys])S.sys="corner";
+document.querySelectorAll("[data-g]").forEach(el=>el.value=S.g[el.dataset.g]);
+renderSys();
+renderAll();
+</script>
+</body>
+</html>
