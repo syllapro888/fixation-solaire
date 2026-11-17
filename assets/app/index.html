@@ -104,6 +104,30 @@
   .seg2 button.on{background:var(--green);color:#fff}
   .subh{font-size:13px;color:var(--muted);font-weight:700;margin:12px 0 6px;text-transform:uppercase;letter-spacing:.5px}
   h4.cut{margin:14px 0 2px;font-size:15px}
+  table.cost td{vertical-align:middle}
+  table.cost td small,table td small{display:block;font-size:11px;color:var(--muted)}
+  table.cost td small a{color:var(--green)}
+  .cin{width:74px;padding:7px 6px;border:1px solid var(--line);border-radius:8px;font-size:15px;text-align:right;background:var(--bg);color:var(--ink)}
+  .cin.wide{width:100%;text-align:left}
+  .x{border:0;background:none;color:var(--muted);font-size:14px;margin-left:4px}
+  .info{background:var(--bg);border-radius:10px;padding:10px;font-size:13px;margin-top:8px;line-height:1.45}
+  table.tot{margin-top:12px;font-size:15px}
+  table.tot tr.grand td{font-size:20px;font-weight:800;color:var(--acc-d);border-bottom:0}
+  .mini{border:1px solid var(--line);background:var(--bg);color:var(--ink);border-radius:8px;padding:6px 9px;margin-left:4px;font:inherit;font-size:13px}
+  .ticket{background:#fff;color:#111;border:1px solid #ddd;border-radius:6px;padding:16px 14px;margin-top:12px;font-size:13px;box-shadow:0 2px 10px rgba(0,0,0,.08)}
+  .ticket .tk-h{text-align:center;border-bottom:2px solid #2f6b45;padding-bottom:8px}
+  .ticket .tk-h b{display:block;font-size:18px;color:#2f6b45}
+  .ticket .tk-h span{display:block;font-size:12px;color:#555}
+  .ticket .tk-t{text-align:center;font-weight:800;font-size:15px;margin:10px 0 6px;letter-spacing:.5px}
+  .ticket .tk-t span{font-weight:600;font-size:12px;color:#555}
+  .ticket .tk-i{display:flex;flex-wrap:wrap;justify-content:space-between;gap:2px 10px;font-size:12px}
+  .ticket .tk-d{margin:8px 0;padding:6px 8px;background:#f1f5f2;border-radius:6px;font-size:12px}
+  .ticket table{font-size:12px}
+  .ticket th,.ticket td{border-bottom:1px dashed #ccc;color:#111;padding:5px 3px}
+  .ticket th{color:#555}
+  .ticket tr.st td{border-top:1.5px solid #333;font-weight:700}
+  .ticket tr.gt td{font-size:16px;font-weight:800;border-bottom:0;border-top:2px solid #2f6b45;color:#2f6b45}
+  .ticket .tk-f{text-align:center;font-size:11px;color:#777;margin-top:10px}
 </style>
 </head>
 <body>
@@ -146,6 +170,28 @@
 
   <div id="frames"></div>
 
+  <section class="card" id="costs"></section>
+
+  <section class="card">
+    <h2>Ticket d'installation</h2>
+    <div class="grid">
+      <div class="f" style="grid-column:1/-1"><label>Nom du client</label><input data-cl="name" type="text"></div>
+      <div class="f"><label>Téléphone du client</label><input data-cl="phone" type="tel"></div>
+      <div class="f"><label>Lieu</label><input data-cl="lieu" type="text"></div>
+    </div>
+    <details style="margin-top:10px"><summary>🏢 Mon entreprise (en-tête du ticket)</summary>
+      <div class="grid">
+        <div class="f" style="grid-column:1/-1"><label>Nom de l'entreprise</label><input data-co="company" type="text"></div>
+        <div class="f"><label>Téléphone</label><input data-co="phone" type="tel"></div>
+        <div class="f"><label>Adresse</label><input data-co="address" type="text"></div>
+      </div>
+    </details>
+    <button type="button" class="btn primary" id="tkShow" style="margin-top:12px">🧾 Voir le ticket</button>
+    <div id="tkPreview" data-open="0"></div>
+    <div id="tkHist"></div>
+  </section>
+
+
   <section class="card">
     <h2>Plan de coupe</h2>
     <div id="plan"></div>
@@ -180,16 +226,8 @@
         <div class="f"><label>Dépassement du rail (chaque bout)</label><input data-g="overhang" type="number" inputmode="decimal"></div>
         <div class="f"><label>Écart entre pattes de toit</label><input data-g="footSpacing" type="number" inputmode="decimal"><small class="note">rail sur toit / tôle</small></div>
       </div>
-      <p class="subh">Prix (facultatif)</p>
-      <div class="grid">
-        <div class="f"><label>Corner</label><input data-g="price" type="number" inputmode="decimal" placeholder="ex. 12000"></div>
-        <div class="f"><label>Rail</label><input data-g="priceRail" type="number" inputmode="decimal"></div>
-        <div class="f"><label>Clamp du milieu</label><input data-g="priceMid" type="number" inputmode="decimal"></div>
-        <div class="f"><label>Clamp d'extrémité</label><input data-g="priceEnd" type="number" inputmode="decimal"></div>
-        <div class="f"><label>Jonction de rail</label><input data-g="priceJoin" type="number" inputmode="decimal"></div>
-        <div class="f"><label>Patte de toit</label><input data-g="priceFoot" type="number" inputmode="decimal"></div>
-        <div class="f"><label>Devise</label><input data-g="cur" type="text"></div>
-      </div>
+      <p class="subh">Monnaie</p>
+      <div class="grid"><div class="f"><label>Devise</label><input data-g="cur" type="text"></div></div>
       <div class="row-btns"><button type="button" id="resetG">Remettre les mesures par défaut</button></div>
     </details>
   </section>
@@ -338,12 +376,6 @@ function plan(frames){
     hooks:rs.reduce((s,r)=>s+r.hooks,0)
   };
   return {corner,rail,acc,raw};
-}
-function costOf(p){
-  const pr=k=>{const v=parseFloat(S.g[k]);return isFinite(v)&&v>0?v:null;};
-  const lines=[[pr("price"),p.corner.bars.length],[pr("priceRail"),p.rail.bars.length],[pr("priceMid"),p.acc.clampMid],[pr("priceEnd"),p.acc.clampEnd],[pr("priceJoin"),p.acc.joins],[pr("priceFoot"),p.acc.pattes]];
-  let any=false,t=0;lines.forEach(([v,q])=>{if(v!==null&&q>0){any=true;t+=v*q;}});
-  return any?t:null;
 }
 
 /* ---------- dessin 3D réaliste ---------- */
@@ -570,7 +602,7 @@ function cutHTML(pm,title){
     b.items.map(it=>{const w=it.len/pm.barL*100;return `<div class="seg" style="width:${w}%;background:${TYPES[it.type].color}" title="${TYPES[it.type].name} – cadre ${it.frame+1}">${w>7?`<span>${fmt(it.len)}${it.part?"*":""}${w>11&&S.frames.length>1?`<small>C${it.frame+1}</small>`:""}</span>`:""}</div>`;}).join("")}</div></div>`).join("");
 }
 function renderResult(){
-  const p=plan(S.frames),a=p.acc,cost=costOf(p);
+  const p=plan(S.frames),a=p.acc,cost=costModel().total;
   const k=(v,lbl,main)=>v?`<div class="${main?"main":""}"><b>${v}</b><span>${lbl}</span></div>`:"";
   let h=`<h2>Résultat · ${S.total} panneaux · ${label(S.frames.map(f=>f.n))}</h2><div class="kpi">`;
   h+=k(p.corner.bars.length,`corners de ${fmt(p.corner.barL/100)} m à acheter`,true);
@@ -578,7 +610,7 @@ function renderResult(){
   h+=k(S.frames.length,`cadre${S.frames.length>1?"s":""}`);
   h+=k(a.legs,"pieds")+k(a.hooks,"crochets")+k(a.clampMid,"clamps du milieu")+k(a.clampEnd,"clamps d'extrémité")+k(a.joins,"jonctions de rail")+k(a.pattes,"pattes de toit");
   h+=`</div>`;
-  if(cost!==null) h+=`<p style="margin:12px 0 0;font-size:18px"><b>Coût du matériel : ${money(cost)} ${S.g.cur||""}</b></p>`;
+  if(cost>0) h+=`<p style="margin:12px 0 0;font-size:18px"><b>Coût total de l'installation : ${money(cost)} ${S.g.cur||""}</b> <a href="#costs" style="font-size:13px;color:var(--green)">détail ↓</a></p>`;
   const g={};p.raw.forEach(x=>{const kk=x.type+"|"+x.len;g[kk]=g[kk]||{...x,q:0};g[kk].q++;});
   h+=`<table style="margin-top:12px"><tr><th>Toutes les pièces</th><th class="n">Longueur</th><th class="n">Nombre</th></tr>`;
   Object.values(g).sort((x,y)=>ORDER.indexOf(x.type)-ORDER.indexOf(y.type)||y.len-x.len).forEach(x=>{h+=`<tr><td><span class="dot" style="background:${TYPES[x.type].color}"></span>${TYPES[x.type].name}</td><td class="n">${fmt(x.len)} cm</td><td class="n"><b>${x.q}</b></td></tr>`;});
@@ -594,7 +626,7 @@ function renderResult(){
   const used=new Set(p.raw.map(x=>x.type));
   $("legend").innerHTML=ORDER.filter(t=>used.has(t)).map(t=>`<span><span class="dot" style="background:${TYPES[t].color}"></span>${TYPES[t].name}</span>`).join("");
 }
-function update(){save();$("total").value=S.total;renderChips();renderResult();updateFrameViews();}
+function update(){save();$("total").value=S.total;renderChips();renderResult();updateFrameViews();renderCosts();renderTicketPreview(false);}
 function renderAll(){renderFrames();update();}
 
 /* ---------- événements ---------- */
@@ -646,6 +678,266 @@ document.querySelectorAll("[data-g]").forEach(el=>{
 });
 $("resetG").onclick=()=>{S.g={...GDEF};document.querySelectorAll("[data-g]").forEach(el=>el.value=S.g[el.dataset.g]);renderAll();};
 
+/* ================= COÛTS, PEINTURE, SOUDURE, TICKET ================= */
+const CDEF={flange:3.5,coats:2,cover:8,potKg:1,finition:false,dilPct:15,dilBottle:1,
+  ptsJoint:2,ptsBag:4,packSize:10,packPrice:3000,halfPrice:1500,unitPrice:300,
+  disques:true,cutsDisc:40,jointsMeule:30,
+  moMode:"panneau",moRate:"",moDays:1,moDayRate:"",moForfait:"",transport:"",divers:"",remise:"",
+  company:"",phone:"",address:""};
+const ART={
+  corner:{n:()=>`Corner ${fmt(gNum("barL")/100)} m`,u:"barre"},
+  rail:{n:()=>`Rail ${fmt(gNum("railL")/100)} m`,u:"barre"},
+  clampMid:{n:()=>"Clamp du milieu",u:"pièce"},
+  clampEnd:{n:()=>"Clamp d'extrémité",u:"pièce"},
+  joins:{n:()=>"Jonction de rail",u:"pièce"},
+  pattes:{n:()=>"Patte de toit",u:"pièce"},
+  antirouille:{n:()=>`Anti-rouille ${fmt(cNum("potKg"))} kg`,u:"pot"},
+  finition:{n:()=>`Peinture finition ${fmt(cNum("potKg"))} kg`,u:"pot"},
+  diluant:{n:()=>`Diluant ${fmt(cNum("dilBottle"))} L`,u:"bouteille"},
+  baguettes:{n:()=>"Baguettes de soudure",u:"baguette"},
+  disqueC:{n:()=>"Disque à couper",u:"pièce"},
+  disqueM:{n:()=>"Disque à meuler",u:"pièce"}
+};
+const pnum=v=>parseFloat(String(v??"").replace(/\s/g,"").replace(",","."));
+function cNum(k){const v=pnum(S.c[k]);return isFinite(v)?v:(typeof CDEF[k]==="number"?CDEF[k]:0);}
+function cVal(k){const v=pnum(S.c[k]);return isFinite(v)?v:0;}
+function priceOf(k){const v=pnum(S.prices[k]);return isFinite(v)&&v>=0?v:0;}
+
+/* soudure : nombre de jonctions */
+function weldJoints(p){
+  let j=0;
+  S.frames.map(resolve).forEach(r=>{
+    if(r.roof)return;
+    const endCorner=2-r.nRails;
+    j+=endCorner*2;              // coins du cadre (côtés + barres A→B en corner)
+    j+=r.mid*endCorner;          // supports du milieu sur les barres en corner
+    j+=r.legF+r.legB;            // pieds sur le cadre
+    j+=r.legF+r.legB;            // semelles (T)
+    j+=r.hooks;                  // crochets
+  });
+  return j+p.corner.welds;       // raccords de pièces trop longues
+}
+/* meilleure façon d'acheter les baguettes : paquets, demi-paquets, pièces */
+function buyBaguettes(n){
+  const ps=Math.max(1,Math.round(cNum("packSize"))),pp=cVal("packPrice");
+  const hs=Math.max(1,Math.floor(ps/2)),hp=S.c.halfPrice===""?Infinity:cVal("halfPrice");
+  const up=S.c.unitPrice===""?Infinity:cVal("unitPrice");
+  let best=null;
+  for(let k=0;k<=Math.ceil(n/ps);k++){
+    const r1=Math.max(0,n-k*ps);
+    for(let h=0;h<=Math.ceil(r1/hs);h++){
+      const r2=Math.max(0,r1-h*hs);
+      const cost=k*pp+(h?h*hp:0)+(r2?r2*up:0);
+      if(!isFinite(cost))continue;
+      if(!best||cost<best.cost-1e-9||(Math.abs(cost-best.cost)<1e-9&&k+h+r2<best.k+best.h+best.u))best={k,h,u:r2,cost};
+    }
+  }
+  if(!best)best={k:Math.ceil(n/ps),h:0,u:0,cost:Math.ceil(n/ps)*pp};
+  const parts=[];
+  if(best.k)parts.push(`${best.k} paquet${best.k>1?"s":""}`);
+  if(best.h)parts.push(`${best.h} demi-paquet${best.h>1?"s":""}`);
+  if(best.u)parts.push(`${best.u} pièce${best.u>1?"s":""}`);
+  best.txt=parts.join(" + ")||"—";
+  return best;
+}
+function costModel(){
+  const p=plan(S.frames),a=p.acc;
+  // peinture
+  const meters=p.corner.total/100;
+  const surf=meters*4*cNum("flange")/100;
+  const kg=surf*cNum("coats")/Math.max(0.1,cNum("cover"));
+  const pots=kg>0?Math.ceil(kg/Math.max(0.1,cNum("potKg"))-1e-9):0;
+  const kgFin=S.c.finition?kg:0,potsFin=S.c.finition?pots:0;
+  const dilL=(kg+kgFin)*cNum("dilPct")/100;
+  const dil=dilL>0?Math.ceil(dilL/Math.max(0.05,cNum("dilBottle"))-1e-9):0;
+  // soudure
+  const joints=weldJoints(p),points=joints*cNum("ptsJoint");
+  const bagAuto=points>0?Math.ceil(points/Math.max(0.1,cNum("ptsBag"))-1e-9):0;
+  const cuts=p.corner.bars.reduce((s,b)=>s+b.items.length,0)+p.rail.bars.reduce((s,b)=>s+b.items.length,0);
+  const auto={
+    corner:p.corner.bars.length, rail:p.rail.bars.length,
+    clampMid:a.clampMid, clampEnd:a.clampEnd, joins:a.joins, pattes:a.pattes,
+    antirouille:pots, finition:potsFin, diluant:dil, baguettes:bagAuto,
+    disqueC:S.c.disques&&cuts?Math.ceil(cuts/Math.max(1,cNum("cutsDisc"))):0,
+    disqueM:S.c.disques&&joints?Math.ceil(joints/Math.max(1,cNum("jointsMeule"))):0
+  };
+  const rows=[];
+  Object.keys(ART).forEach(k=>{
+    const ov=S.qty[k],qty=ov!=null&&ov!==""&&isFinite(pnum(ov))?Math.max(0,pnum(ov)):auto[k];
+    if(!qty&&!(ov!=null&&ov!==""))return;
+    if(k==="baguettes"){
+      const b=buyBaguettes(qty);
+      rows.push({key:k,name:ART[k].n(),qty,auto:auto[k],over:ov!=null&&ov!=="",price:null,total:b.cost,detail:b.txt,unit:ART[k].u});
+    } else {
+      const pr=priceOf(k);
+      rows.push({key:k,name:ART[k].n(),qty,auto:auto[k],over:ov!=null&&ov!=="",price:pr,total:qty*pr,unit:ART[k].u});
+    }
+  });
+  S.custom.forEach((c,i)=>{const q=Math.max(0,pnum(c.qty)||0),pr=Math.max(0,pnum(c.price)||0);rows.push({key:"c"+i,custom:i,name:c.name||"Article",qty:q,price:pr,total:q*pr,unit:""});});
+  const fourn=rows.reduce((s,r)=>s+r.total,0);
+  let mo=0,moTxt="";
+  if(S.c.moMode==="panneau"){mo=S.total*cVal("moRate");moTxt=`${S.total} panneaux × ${money(cVal("moRate"))}`;}
+  else if(S.c.moMode==="jour"){mo=cVal("moDays")*cVal("moDayRate");moTxt=`${fmt(cVal("moDays"))} jour${cVal("moDays")>1?"s":""} × ${money(cVal("moDayRate"))}`;}
+  else {mo=cVal("moForfait");moTxt="forfait";}
+  const transport=cVal("transport"),divers=cVal("divers"),remise=cVal("remise");
+  const total=Math.max(0,fourn+mo+transport+divers-remise);
+  return {p,rows,fourn,mo,moTxt,transport,divers,remise,total,
+    paint:{meters,surf,kg,pots,dilL,dil},weld:{joints,points,bag:bagAuto},cuts};
+}
+
+/* ---------- rendu de la carte Coûts ---------- */
+const CF=(k,lbl,attrs="")=>`<div class="f"><label>${lbl}</label><input data-c="${k}" type="text" inputmode="decimal" ${attrs}></div>`;
+function renderCosts(){
+  const box=$("costs");if(!box)return;
+  // garder le champ en cours de saisie
+  const ae=document.activeElement;let keep=null;
+  if(ae&&box.contains(ae)&&ae.dataset){keep={sel:Object.entries(ae.dataset).map(([k,v])=>`[data-${k.replace(/[A-Z]/g,m=>"-"+m.toLowerCase())}="${v}"]`).join(""),pos:ae.selectionStart};}
+  const m=costModel(),cur=S.g.cur||"";
+  let h=`<h2>Coûts de l'installation</h2>
+  <table class="cost"><tr><th>Article</th><th class="n">Qté</th><th class="n">Prix u.</th><th class="n">Total</th></tr>`;
+  m.rows.forEach(r=>{
+    if(r.custom!=null){
+      h+=`<tr><td><input class="cin wide" data-cu="${r.custom}" data-cf="name" value="${(S.custom[r.custom].name||"").replace(/"/g,"&quot;")}" placeholder="Nom de l'article"></td>
+      <td class="n"><input class="cin" type="text" inputmode="decimal" data-cu="${r.custom}" data-cf="qty" value="${S.custom[r.custom].qty??""}"></td>
+      <td class="n"><input class="cin" type="text" inputmode="decimal" data-cu="${r.custom}" data-cf="price" value="${S.custom[r.custom].price??""}"></td>
+      <td class="n"><b>${money(r.total)}</b><button type="button" class="x" data-cdel="${r.custom}">✕</button></td></tr>`;
+    } else {
+      h+=`<tr><td>${r.name}${r.detail?`<small>${r.detail}</small>`:""}${r.over?`<small><a href="#" data-qreset="${r.key}">↺ auto : ${r.auto}</a></small>`:""}</td>
+      <td class="n"><input class="cin" type="text" inputmode="decimal" data-q="${r.key}" value="${r.qty}"></td>
+      <td class="n">${r.price===null?`<small>voir soudure</small>`:`<input class="cin" type="text" inputmode="decimal" data-pr="${r.key}" value="${S.prices[r.key]??""}" placeholder="0">`}</td>
+      <td class="n"><b>${money(r.total)}</b></td></tr>`;
+    }
+  });
+  h+=`</table>
+  <div class="row-btns"><button type="button" id="addArt">＋ Ajouter un article</button></div>
+  <div class="info">🎨 <b>Peinture</b> : ${fmt(m.paint.meters)} m de corner → ${fmt(m.paint.surf)} m² × ${fmt(cNum("coats"))} couche${cNum("coats")>1?"s":""} → ${fmt(m.paint.kg)} kg d'anti-rouille → <b>${m.paint.pots} pot${m.paint.pots>1?"s":""}</b>${S.c.finition?` (+ ${m.paint.pots} de finition)`:""} · diluant ≈ ${fmt(m.paint.dilL)} L</div>
+  <div class="info">🔥 <b>Soudure</b> : ${m.weld.joints} jonctions × ${fmt(cNum("ptsJoint"))} = <b>${m.weld.points} points</b> → ${m.weld.bag} baguettes (${fmt(cNum("ptsBag"))} points par baguette)</div>
+  <details style="margin-top:10px"><summary>⚙️ Réglages peinture, soudure, disques</summary>
+    <p class="subh">Peinture</p><div class="grid">
+      ${CF("flange","Largeur du corner (cm)")}${CF("coats","Nombre de couches")}
+      ${CF("cover","1 kg couvre (m² par couche)")}${CF("potKg","Pot de (kg)")}
+      ${CF("dilPct","Diluant (% de la peinture)")}${CF("dilBottle","Bouteille de diluant (L)")}
+      <div class="f" style="grid-column:1/-1"><label><input type="checkbox" data-cb="finition" ${S.c.finition?"checked":""}> Ajouter une peinture de finition</label></div>
+    </div>
+    <p class="subh">Soudure</p><div class="grid">
+      ${CF("ptsJoint","Points par jonction")}${CF("ptsBag","Points par baguette")}
+      ${CF("packSize","Baguettes par paquet")}${CF("packPrice","Prix du paquet")}
+      ${CF("halfPrice","Prix du demi-paquet","placeholder='vide = pas de demi'")}${CF("unitPrice","Prix à la pièce","placeholder='vide = pas à la pièce'")}
+    </div>
+    <p class="subh">Disques</p><div class="grid">
+      <div class="f" style="grid-column:1/-1"><label><input type="checkbox" data-cb="disques" ${S.c.disques?"checked":""}> Compter les disques</label></div>
+      ${CF("cutsDisc","Coupes par disque à couper")}${CF("jointsMeule","Jonctions par disque à meuler")}
+    </div>
+  </details>
+  <p class="subh">Main-d'œuvre et frais</p>
+  <div class="seg3">${[["panneau","Par panneau"],["jour","Par jour"],["forfait","Forfait"]].map(([k,t])=>`<button type="button" data-mo="${k}" class="${S.c.moMode===k?"on":""}">${t}</button>`).join("")}</div>
+  <div class="grid">
+    ${S.c.moMode==="panneau"?CF("moRate","Prix par panneau"):S.c.moMode==="jour"?CF("moDays","Nombre de jours")+CF("moDayRate","Prix par jour"):CF("moForfait","Montant forfait")}
+    ${CF("transport","Transport")}${CF("divers","Divers")}${CF("remise","Remise")}
+  </div>
+  <table class="tot">
+    <tr><td>Fournitures</td><td class="n">${money(m.fourn)} ${cur}</td></tr>
+    <tr><td>Main-d'œuvre <small>${m.moTxt}</small></td><td class="n">${money(m.mo)} ${cur}</td></tr>
+    ${m.transport?`<tr><td>Transport</td><td class="n">${money(m.transport)} ${cur}</td></tr>`:""}
+    ${m.divers?`<tr><td>Divers</td><td class="n">${money(m.divers)} ${cur}</td></tr>`:""}
+    ${m.remise?`<tr><td>Remise</td><td class="n">− ${money(m.remise)} ${cur}</td></tr>`:""}
+    <tr class="grand"><td>TOTAL</td><td class="n">${money(m.total)} ${cur}</td></tr>
+  </table>`;
+  box.innerHTML=h;
+  box.querySelectorAll("[data-c]").forEach(el=>el.value=S.c[el.dataset.c]??"");
+  if(keep&&keep.sel){const el=box.querySelector(keep.sel);if(el){el.focus();try{if(keep.pos!=null)el.setSelectionRange(keep.pos,keep.pos);}catch(e){}}}
+  bindCosts();
+}
+function bindCosts(){
+  const box=$("costs");
+  box.querySelectorAll("[data-c]").forEach(el=>el.oninput=()=>{S.c[el.dataset.c]=el.value;costsChanged();});
+  box.querySelectorAll("[data-cb]").forEach(el=>el.onchange=()=>{S.c[el.dataset.cb]=el.checked;costsChanged();});
+  box.querySelectorAll("[data-pr]").forEach(el=>el.oninput=()=>{S.prices[el.dataset.pr]=el.value;costsChanged();});
+  box.querySelectorAll("[data-q]").forEach(el=>el.oninput=()=>{S.qty[el.dataset.q]=el.value;costsChanged();});
+  box.querySelectorAll("[data-qreset]").forEach(el=>el.onclick=e=>{e.preventDefault();delete S.qty[el.dataset.qreset];costsChanged();});
+  box.querySelectorAll("[data-cu]").forEach(el=>el.oninput=()=>{S.custom[+el.dataset.cu][el.dataset.cf]=el.value;costsChanged();});
+  box.querySelectorAll("[data-cdel]").forEach(el=>el.onclick=()=>{S.custom.splice(+el.dataset.cdel,1);costsChanged();});
+  box.querySelectorAll("[data-mo]").forEach(el=>el.onclick=()=>{S.c.moMode=el.dataset.mo;costsChanged();});
+  $("addArt").onclick=()=>{S.custom.push({name:"",qty:1,price:""});costsChanged();setTimeout(()=>{const els=box.querySelectorAll('[data-cf="name"]');els[els.length-1]?.focus();},30);};
+}
+function costsChanged(){save();renderCosts();renderTicketPreview(false);}
+
+/* ---------- ticket ---------- */
+function sysLabel(){const s=new Set(S.frames.map(f=>resolve(f).sys));return [...s].map(k=>SYS[k].t).join(" / ");}
+function buildTicket(no){
+  const m=costModel();
+  return {
+    no:no||`T-${new Date().getFullYear()}-${String((S.seq||0)+1).padStart(4,"0")}`,
+    date:new Date().toISOString(),
+    company:{name:S.c.company||"",phone:S.c.phone||"",address:S.c.address||""},
+    client:{...S.client},
+    desc:`${S.total} panneau${S.total>1?"x":""} – ${label(S.frames.map(f=>f.n))} – ${sysLabel()}`,
+    lines:m.rows.map(r=>({name:r.name+(r.detail?` (${r.detail})`:""),qty:r.qty,unit:r.unit,price:r.price,total:r.total})),
+    fourn:m.fourn,mo:m.mo,moTxt:m.moTxt,transport:m.transport,divers:m.divers,remise:m.remise,total:m.total,cur:S.g.cur||""
+  };
+}
+function ticketHTML(t){
+  const cur=t.cur,d=new Date(t.date);
+  const ds=`${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+  let h=`<div class="ticket">
+    <div class="tk-h"><b>${esc(t.company.name||"Mon entreprise")}</b>${t.company.phone?`<span>Tél : ${esc(t.company.phone)}</span>`:""}${t.company.address?`<span>${esc(t.company.address)}</span>`:""}</div>
+    <div class="tk-t">TICKET D'INSTALLATION<br><span>N° ${esc(t.no)}</span></div>
+    <div class="tk-i"><span>Client : <b>${esc(t.client.name||"…")}</b></span><span>Date : ${ds}</span>
+    ${t.client.phone?`<span>Tél : ${esc(t.client.phone)}</span>`:""}${t.client.lieu?`<span>Lieu : ${esc(t.client.lieu)}</span>`:""}</div>
+    <div class="tk-d">${esc(t.desc)}</div>
+    <table><tr><th>Article</th><th class="n">Qté</th><th class="n">P.U.</th><th class="n">Total</th></tr>`;
+  t.lines.forEach(l=>{h+=`<tr><td>${esc(l.name)}</td><td class="n">${fmt(l.qty)}</td><td class="n">${l.price==null?"":money(l.price)}</td><td class="n">${money(l.total)}</td></tr>`;});
+  h+=`<tr class="st"><td colspan="3">Sous-total fournitures</td><td class="n">${money(t.fourn)}</td></tr>`;
+  if(t.mo)h+=`<tr><td colspan="3">Main-d'œuvre (${esc(t.moTxt)})</td><td class="n">${money(t.mo)}</td></tr>`;
+  if(t.transport)h+=`<tr><td colspan="3">Transport</td><td class="n">${money(t.transport)}</td></tr>`;
+  if(t.divers)h+=`<tr><td colspan="3">Divers</td><td class="n">${money(t.divers)}</td></tr>`;
+  if(t.remise)h+=`<tr><td colspan="3">Remise</td><td class="n">− ${money(t.remise)}</td></tr>`;
+  h+=`<tr class="gt"><td colspan="3">TOTAL</td><td class="n">${money(t.total)} ${esc(cur)}</td></tr></table>
+    <div class="tk-f">Merci pour votre confiance</div></div>`;
+  return h;
+}
+function ticketText(t){
+  const d=new Date(t.date),ds=`${String(d.getDate()).padStart(2,"0")}/${String(d.getMonth()+1).padStart(2,"0")}/${d.getFullYear()}`;
+  let s=`*${t.company.name||"Ticket d'installation"}*${t.company.phone?`\nTél : ${t.company.phone}`:""}\n*TICKET D'INSTALLATION N° ${t.no}*\nClient : ${t.client.name||"…"}   Date : ${ds}\n${t.desc}\n\n`;
+  t.lines.forEach(l=>s+=`- ${l.name} : ${fmt(l.qty)}${l.price!=null?` × ${money(l.price)}`:""} = ${money(l.total)}\n`);
+  s+=`\nFournitures : ${money(t.fourn)}\n`;
+  if(t.mo)s+=`Main-d'œuvre (${t.moTxt}) : ${money(t.mo)}\n`;
+  if(t.transport)s+=`Transport : ${money(t.transport)}\n`;
+  if(t.divers)s+=`Divers : ${money(t.divers)}\n`;
+  if(t.remise)s+=`Remise : − ${money(t.remise)}\n`;
+  s+=`*TOTAL : ${money(t.total)} ${t.cur}*`;
+  return s;
+}
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+let shownTicket=null; // null = ticket en cours ; sinon ticket enregistré
+function renderTicketPreview(scroll){
+  const box=$("tkPreview");if(!box||box.dataset.open!=="1")return;
+  const t=shownTicket||buildTicket();
+  box.innerHTML=ticketHTML(t)+`<div class="row-btns">
+    <button type="button" class="native-only" id="tkPdf">📄 PDF / WhatsApp</button>
+    <button type="button" id="tkCopy">📋 Copier le texte</button>
+    ${shownTicket?`<button type="button" id="tkClose">✕ Fermer</button>`:`<button type="button" id="tkSave">💾 Enregistrer</button>`}
+  </div><p class="note" id="tkMsg"></p>`;
+  $("tkCopy").onclick=async()=>{const txt=ticketText(t);if(natif({a:"copy",t:txt})){$("tkMsg").textContent="✅ Copié";return;}try{await navigator.clipboard.writeText(txt);$("tkMsg").textContent="✅ Copié";}catch(e){$("tkMsg").innerHTML="<textarea style='width:100%;height:180px'>"+esc(txt)+"</textarea>";}};
+  $("tkPdf").onclick=()=>{natif({a:"pdf",t});};
+  if($("tkSave"))$("tkSave").onclick=()=>{S.seq=(S.seq||0)+1;const tt=buildTicket(`T-${new Date().getFullYear()}-${String(S.seq).padStart(4,"0")}`);S.tickets.unshift(tt);save();shownTicket=tt;renderTicketPreview(false);renderHistory();$("tkMsg").textContent=`✅ Ticket ${tt.no} enregistré`;};
+  if($("tkClose"))$("tkClose").onclick=()=>{shownTicket=null;box.dataset.open="0";box.innerHTML="";};
+  if(scroll)box.scrollIntoView({behavior:"smooth",block:"start"});
+}
+function renderHistory(){
+  const box=$("tkHist");if(!box)return;
+  if(!S.tickets.length){box.innerHTML="";return;}
+  box.innerHTML=`<p class="subh">Tickets enregistrés</p><table>${S.tickets.map((t,i)=>{const d=new Date(t.date);return `<tr><td><b>${esc(t.no)}</b><small>${esc(t.client.name||"—")} · ${d.toLocaleDateString("fr-FR")}</small></td><td class="n">${money(t.total)} ${esc(t.cur)}</td><td class="n"><button type="button" class="mini" data-tkv="${i}">Voir</button><button type="button" class="mini" data-tkd="${i}">✕</button></td></tr>`;}).join("")}</table>`;
+  box.querySelectorAll("[data-tkv]").forEach(b=>b.onclick=()=>{shownTicket=S.tickets[+b.dataset.tkv];$("tkPreview").dataset.open="1";renderTicketPreview(true);});
+  box.querySelectorAll("[data-tkd]").forEach(b=>b.onclick=()=>{const t=S.tickets[+b.dataset.tkd];if(b.dataset.sure!=="1"){b.dataset.sure="1";b.textContent="Supprimer ?";return;}S.tickets.splice(+b.dataset.tkd,1);if(shownTicket===t){shownTicket=null;$("tkPreview").dataset.open="0";$("tkPreview").innerHTML="";}save();renderHistory();});
+}
+function initTicketCard(){
+  document.querySelectorAll("[data-cl]").forEach(el=>{el.value=S.client[el.dataset.cl]||"";el.oninput=()=>{S.client[el.dataset.cl]=el.value;save();renderTicketPreview(false);};});
+  document.querySelectorAll("[data-co]").forEach(el=>{el.value=S.c[el.dataset.co]||"";el.oninput=()=>{S.c[el.dataset.co]=el.value;save();renderTicketPreview(false);};});
+  $("tkShow").onclick=()=>{shownTicket=null;$("tkPreview").dataset.open="1";renderTicketPreview(true);};
+  renderHistory();
+}
+
 const NATIVE=!!window.Natif;
 if(NATIVE)document.body.classList.add("native");
 function natif(o){if(!NATIVE)return false;try{window.Natif.postMessage(JSON.stringify(o));return true;}catch(e){return false;}}
@@ -684,12 +976,15 @@ function listText(){
   if(p.corner.bars.length)t+=`\nCoupe des corners :\n${cut(p.corner,"Corner")}\n`;
   if(p.rail.bars.length)t+=`\nCoupe des rails :\n${cut(p.rail,"Rail")}\n`;
   if(p.corner.welds)t+=`Soudures de raccord : ${p.corner.welds}\n`;
-  const c=costOf(p);if(c!==null)t+=`\nCoût du matériel : ${money(c)} ${S.g.cur}`;
+  const m=costModel();if(m.total>0)t+=`\nCoût total de l'installation : ${money(m.total)} ${S.g.cur}`;
   return t;
 }
 
 if(!load()){S.frames=[newFrame(2)];S.total=2;}
 S.frames=S.frames.map(f=>({...newFrame(f.n),...f}));
+S.c={...CDEF,...(S.c||{})};S.prices=S.prices||{};S.qty=S.qty||{};S.custom=S.custom||[];S.tickets=S.tickets||[];S.client=S.client||{name:"",phone:"",lieu:""};S.seq=S.seq||0;
+[["price","corner"],["priceRail","rail"],["priceMid","clampMid"],["priceEnd","clampEnd"],["priceJoin","joins"],["priceFoot","pattes"]].forEach(([o,n])=>{if(S.g[o]!==undefined&&S.g[o]!==""&&S.prices[n]==null)S.prices[n]=S.g[o];delete S.g[o];});
+initTicketCard();
 if(!SYS[S.sys])S.sys="corner";
 document.querySelectorAll("[data-g]").forEach(el=>el.value=S.g[el.dataset.g]);
 renderSys();

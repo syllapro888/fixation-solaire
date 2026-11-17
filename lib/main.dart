@@ -5,6 +5,7 @@ import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:webview_flutter/webview_flutter.dart';
 
+import 'ticket_pdf.dart';
 import 'updater.dart';
 
 void main() {
@@ -88,6 +89,13 @@ class _CalculScreenState extends State<CalculScreen> {
       case 'copy':
         await Clipboard.setData(ClipboardData(text: '${msg['t'] ?? ''}'));
         if (mounted) toast(context, '✅ Liste copiée');
+        break;
+      case 'pdf':
+        try {
+          await shareTicketPdf(Map<String, dynamic>.from(msg['t'] as Map));
+        } catch (e) {
+          if (mounted) toast(context, 'Impossible de créer le PDF');
+        }
         break;
       case 'whatsapp':
         final text = Uri.encodeComponent('${msg['t'] ?? ''}');

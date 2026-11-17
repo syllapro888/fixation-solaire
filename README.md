@@ -14,7 +14,11 @@ aux supports de panneaux solaires, avec simulation 3D et plan de coupe.
 - Vue 3D (tourner avec le doigt), vue de côté avec l'inclinaison.
 - Liste des pièces, plan de coupe optimisé, soudures de raccord pour les
   pièces de plus de 6 m, prix total.
-- Copier la liste ou l'envoyer sur WhatsApp.
+- Coûts : prix de chaque article (modifiable), anti-rouille et diluant,
+  points de soudure et baguettes (paquet, demi-paquet, pièce), disques,
+  main-d’œuvre, transport, remise.
+- Ticket d’installation numéroté, en PDF à partager sur WhatsApp, avec historique.
+- Copier la liste ou l’envoyer sur WhatsApp.
 - Mise à jour intégrée : l'application vérifie la dernière version publiée
   dans **Releases** et propose de l'installer.
 
