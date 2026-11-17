@@ -47,12 +47,13 @@ jobs:
         env:
           KEY_B64: ${{ secrets.ANDROID_KEYSTORE_B64 }}
         run: |
-          mkdir -p ~/.android
+          KS="$RUNNER_TEMP/fixation.keystore"
           if [ -n "$KEY_B64" ]; then
-            printf '%s' "$KEY_B64" | tr -d ' \r\n' | base64 -d > ~/.android/debug.keystore
+            printf '%s' "$KEY_B64" | tr -d ' \r\n' | base64 -d > "$KS"
           else
-            base64 -d .ci/signing-key.b64 > ~/.android/debug.keystore
+            base64 -d .ci/signing-key.b64 > "$KS"
           fi
+          echo "FIXATION_KEYSTORE=$KS" >> "$GITHUB_ENV"
 
       - name: Construire l'APK
         shell: bash

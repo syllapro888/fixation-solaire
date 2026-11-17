@@ -45,4 +45,33 @@ GR
   fi
 done
 
+# Signature : toujours la même clé (fichier indiqué par FIXATION_KEYSTORE).
+# Sans cette variable, Flutter signe avec la clé de debug de l'ordinateur.
+APP_GRADLE=android/app/build.gradle.kts
+if [ -f "$APP_GRADLE" ] && ! grep -q 'FIXATION_KEYSTORE' "$APP_GRADLE"; then
+  python3 - "$APP_GRADLE" <<'PY'
+import sys, re
+p = sys.argv[1]
+s = open(p).read()
+cfg = """    signingConfigs {
+        create("fixe") {
+            val ks = System.getenv("FIXATION_KEYSTORE")
+            if (ks != null) {
+                storeFile = file(ks)
+                storePassword = System.getenv("FIXATION_KEYSTORE_PASS") ?: "android"
+                keyAlias = System.getenv("FIXATION_KEY_ALIAS") ?: "androiddebugkey"
+                keyPassword = System.getenv("FIXATION_KEY_PASS") ?: "android"
+            }
+        }
+    }
+
+    buildTypes {"""
+s = s.replace("    buildTypes {", cfg, 1)
+s = s.replace('signingConfig = signingConfigs.getByName("debug")',
+  'signingConfig = if (System.getenv("FIXATION_KEYSTORE") != null) signingConfigs.getByName("fixe") else signingConfigs.getByName("debug")', 1)
+assert 'signingConfigs.getByName("fixe")' in s, "signature non configurée"
+open(p, "w").write(s)
+PY
+fi
+
 echo "android/ prêt."
